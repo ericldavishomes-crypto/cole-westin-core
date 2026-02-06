@@ -1,18 +1,14 @@
-# Use official Node.js image
-FROM node:18
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
 
-# Create app directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy package files first, then install dependencies
-COPY package*.json ./
-RUN npm install
-
-# Copy rest of the app
+# Copy the local files to the container
 COPY . .
 
-# Start the app
-CMD ["npm", "start"]
+# Install any dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port
-EXPOSE 3000
+# Run the app
+CMD ["python", "app.py"]
