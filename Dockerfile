@@ -1,14 +1,11 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
+FROM node:20-alpine
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the local files to the container
+COPY package*.json ./
+
+RUN npm install
+
 COPY . .
 
-# Install any dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Run the app
-CMD ["python", "app.py"]
+CMD ["node", "index.js"]
