@@ -1,15 +1,14 @@
 {
   "name": "cole-westin-core",
   "version": "1.0.0",
-  "description": "Core service for Cole Westin AI deployment",
-  "main": "app.js",
+  "description": "Core service for Cole",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node index.js"
   },
   "author": "Eric Davis",
   "license": "MIT",
-"dependencies": {
-  "express": "^4.18.2"
+  "dependencies": {
+    "express": "^4.19.2"
+  }
 }
-
-
