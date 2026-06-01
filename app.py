@@ -63,7 +63,7 @@ div[data-testid="stChatInput"] {
     background-color: #ffffff !important;
     border: 1px solid #e2e2e6 !important;
     border-radius: 24px !important;
-    box-shadow: 0 4px 18 rgba(0,0,0,0.03) !important;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.03) !important;
     padding: 4px 12px !important;
     max-width: 720px !important;
     margin: 0 auto !important;
