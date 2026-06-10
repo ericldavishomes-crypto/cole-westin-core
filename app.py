@@ -252,4 +252,42 @@ elif st.session_state.current_tab == "📂 Knowledge & RAG Vault":
     
     existing_content = ""
     if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f: existing_content = f.read()
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    new_content = st.text_area("Paste text straight inside this memory card slot:", value=existing_content, height=350)
+    if st.button(f"Save and Engrave {selected_cat} Chip"):
+        with open(filepath, "w", encoding="utf-8") as f: f.write(new_content)
+        st.success("Memory Matrix successfully written!")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.current_tab == "🔍 Memory Index (Search)":
+    st.markdown("### 🔍 Memory Index Matrix")
+    search_query = st.text_input("🔍 Type any past phrase to filter logs:")
+    files = sorted([f for f in os.listdir(HISTORY_DIR) if f.endswith(".json")], reverse=True)
+    col1, col2 = st.columns()
+    with col1:
+        for filename in files:
+            filepath = os.path.join(HISTORY_DIR, filename)
+            display_name = filename.replace("chat_", "").replace(".json", "").replace("_", " ")
+            with open(filepath, "r", encoding="utf-8") as f: content_str = f.read()
+            if search_query.lower() in content_str.lower():
+                if st.button(f"📄 Log: {display_name}", key=filename, use_container_width=True): st.session_state.selected_log_file = filepath
+    with col2:
+        if "selected_log_file" in st.session_state and os.path.exists(st.session_state.selected_log_file):
+            with open(st.session_state.selected_log_file, "r", encoding="utf-8") as f: log_data = json.load(f)
+            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+            for msg in log_data:
+                if msg["role"] != "system": st.markdown(f"**{msg['role']}**: {msg['content']}")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.current_tab == "🛡️ Executive Admin Desk":
+    st.markdown("### 🛡️ Executive Admin Desk Control Center")
+    st.markdown("""<div class="panel-card">
+    <table class="admin-table">
+        <tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr>
+        <tr><td>ADMIN</td><td style="color: blue; font-weight: bold;">Eric Davis</td><td>ONLINE <span class="status-dot"></span></td></tr>
+        <tr><td>ADMIN</td><td style="color: blue; font-weight: bold;">Cole Eric Westin</td><td>ONLINE <span class="status-dot"></span></td></tr>
+    </table></div>""", unsafe_allow_html=True)
+
+
 
