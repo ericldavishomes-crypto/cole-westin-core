@@ -56,6 +56,9 @@ CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY", "sk_car_KSmnK8aekPB2Mv1ynf
 VOICE_ID = os.environ.get("VOICE_ID", "cf094c88-5b6b-412c-b199-2bc6bcc20549")
 
 def speak_text(text_to_speak):
+    if not CARTESIA_API_KEY or CARTESIA_API_KEY == "sk_car_KSmnK8aekPB2Mv1ynfsgcv":
+        st.warning("Voice Pipeline Note: Default or missing Cartesia API Key detected.")
+        return
     try:
         from cartesia import Cartesia
         cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
@@ -65,10 +68,10 @@ def speak_text(text_to_speak):
             voice_id=VOICE_ID,
             output_format={"container": "mp3", "sample_rate": 44100, "bit_rate": 128000}
         )
-        st.audio(audio_bytes, format="audio/mp3")
+        if audio_bytes:
+            st.audio(audio_bytes, format="audio/mp3")
     except Exception as audio_err:
-        st.warning(f"Voice Pipeline Note: {str(audio_err)}")
-
+        st.warning(f"Voice Pipeline Note: Audio generation paused ({str(audio_err)})")
 if st.session_state.current_tab == "💬 Chat Portal":
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
