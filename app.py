@@ -189,20 +189,15 @@ if st.session_state.current_tab == "💬 Chat Portal":
             
         with st.chat_message("assistant"):
             try:
-                response = client.chat.completions.create(
-                    model="deepseek/deepseek-chat",
-                    messages=compiled_messages,
-                    temperature=st.session_state.temperature,
-                    max_tokens=st.session_state.max_tokens,
-                    stream=False
-                )
+                response = client.chat.completions.create(model="deepseek/deepseek-chat", messages=compiled_messages, temperature=st.session_state.temperature, max_tokens=st.session_state.max_tokens, stream=False)
                 if hasattr(response, 'choices') and len(response.choices) > 0:
-    reply = response.choices[0].message.content
-elif isinstance(response, dict) and 'choices' in response:
-    reply = response['choices'][0]['message']['content']
-
+                    reply = response.choices[0].message.content
+                elif isinstance(response, dict) and 'choices' in response:
+                    reply = response['choices'][0]['message']['content']
                 else:
                     reply = str(response)
+                reply = re.sub(r'\(.?\)', '', reply)
+                reply = reply.strip()
                     
                 # 🛠️ Master Python Post-Processing Filter (The Voice Restoration Shield)
                 reply = re.sub(r'\(.*?\)', '', reply)  # Instantly scrubs out parenthetical leak actions like (laughing)
