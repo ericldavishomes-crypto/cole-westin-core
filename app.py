@@ -93,7 +93,12 @@ if st.session_state.current_tab == "💬 Chat Portal":
             if filename.endswith(".txt"):
                 with open(os.path.join(KNOWLEDGE_DIR, filename), "r", encoding="utf-8") as f:
                     rag_context += f.read() + "\n"
-        compiled_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        compiled_messages = []
+        for m in st.session_state.messages:
+            if isinstance(m, dict):
+                compiled_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+            else:
+                compiled_messages.append({"role": getattr(m, "role", "user"), "content": getattr(m, "content", "")})
         if rag_context:
             compiled_messages.insert(1, {"role": "system", "content": f"ADDITIONAL BASAL CORE KNOWLEDGE CONTEXT:\n{rag_context}"})
         with st.chat_message("assistant"):
