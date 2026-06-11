@@ -197,9 +197,10 @@ if st.session_state.current_tab == "💬 Chat Portal":
                     stream=False
                 )
                 if hasattr(response, 'choices') and len(response.choices) > 0:
-                    reply = response.choices.message.content
-                elif isinstance(response, dict) and 'choices' in response:
-                    reply = response['choices']['message']['content']
+    reply = response.choices[0].message.content
+elif isinstance(response, dict) and 'choices' in response:
+    reply = response['choices'][0]['message']['content']
+
                 else:
                     reply = str(response)
                     
