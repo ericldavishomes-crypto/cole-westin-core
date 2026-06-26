@@ -86,7 +86,7 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Chats</h3>", unsafe_allow_html=True)
-    if st.button("➕ New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
+    if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         with db_engine.begin() as conn:
@@ -97,7 +97,7 @@ with st.sidebar:
         sessions_df = pd.read_sql("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;", db_engine)
         for _, row in sessions_df.iterrows():
             is_active = (row['session_id'] == st.session_state.current_session_id)
-            btn_label = f"● {row['title']}" if is_active else f"💬 {row['title']}"
+            btn_label = f" {row['title']}" if is_active else f" {row['title']}"
             if st.button(btn_label, key=f"side_sess_{row['session_id']}", use_container_width=True):
                 st.session_state.current_session_id = row['session_id']
                 with db_engine.connect() as conn:
