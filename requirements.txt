@@ -1,4 +1,7 @@
 streamlit
 openai
-cartesia
+sqlalchemy
+psycopg2-binary
+pandas
+requests
 
