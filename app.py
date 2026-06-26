@@ -126,6 +126,8 @@ with c5:
 st.markdown("<hr style='margin-top:10px; margin-bottom:30px; border-color:#e5e5e7;'>", unsafe_allow_html=True)
 
 st.session_state.initial_sidebar_state = "expanded"
+
+if st.session_state.current_tab.strip() == "Chat":
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         try:
