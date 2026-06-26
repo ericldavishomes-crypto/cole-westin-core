@@ -85,7 +85,7 @@ if st.session_state.current_session_id is None:
         conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
 
 with st.sidebar:
-    st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Chats</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
     if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
