@@ -139,4 +139,6 @@ if st.session_state.current_tab == "Chat":
         if message["role"] != "system":
             with st.chat_message(message["role"]):
                 if message["role"] == "assistant":
-
+                    st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
+                else:
+                    st.write(message["content"])
