@@ -40,7 +40,8 @@ if "presence_penalty" not in st.session_state: st.session_state.presence_penalty
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 if "current_tab" not in st.session_state: st.session_state.current_tab = "Chat"
 
-DATABASE_URL = "postgresql://_0a7fe02072bb108b:_f6285eaac7395ed03666befa1fdeb2@primary.cole-soul-database-6j75mt24x9r1.addon.code.nf:5432/_a1191c7d7e30"
+DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
+
 
 @st.cache_resource
 def get_postgres_engine():
