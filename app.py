@@ -125,8 +125,8 @@ with c5:
     if st.button("Admin Dashboard", key="nav_btn_admin", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
 st.markdown("<hr style='margin-top:10px; margin-bottom:30px; border-color:#e5e5e7;'>", unsafe_allow_html=True)
 
-if st.session_state.current_tab == "Chat":
-    if "messages" not in st.session_state or len(st.session_state.messages) <= 1:
+if st.session_state.current_tab.strip() == "Chat":
+    if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         try:
             with db_engine.connect() as conn:
