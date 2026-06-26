@@ -8,7 +8,7 @@ import pandas as pd
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""<style>
-div[data-testid="stHeader"], header { display: none !important; visibility: hidden !important; height: 0px !important; width: 0px !important; }
+header { background-color: transparent !important; box-shadow: none !important; }
 [data-testid="stAppViewContainer"] { background-color: #ffffff !important; color: #111111 !important; padding-top: 20px !important; }
 [data-testid="stSidebar"] { background-color: #f7f7f8 !important; border-right: 1px solid #e5e5e7 !important; }
 .stChatMessage { background-color: transparent !important; border: none !important; margin-bottom: 28px !important; padding: 0px 15% !important; width: 100% !important; }
@@ -252,9 +252,9 @@ elif st.session_state.current_tab == "Past Chats Archive":
                 
                 col_info, col_action = st.columns([4, 1])
                 with col_info:
-                    st.write(f"📅 `{date_str}` 💬 **{title_str}**")
+                    st.write(f" `{date_str}`  **{title_str}**")
                 with col_action:
-                    if st.button("Delete Thread ❌", key=f"del_mgr_{sess_id}", use_container_width=True):
+                    if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
                         with db_engine.begin() as del_conn:
                             del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
                         st.rerun()
