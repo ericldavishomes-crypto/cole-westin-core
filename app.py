@@ -125,7 +125,7 @@ with c5:
     if st.button("Admin Dashboard", key="nav_btn_admin", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
 st.markdown("<hr style='margin-top:10px; margin-bottom:30px; border-color:#e5e5e7;'>", unsafe_allow_html=True)
 
-if st.session_state.current_tab.strip() == "Chat":
+st.session_state.initial_sidebar_state = "expanded"
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         try:
@@ -225,6 +225,8 @@ elif st.session_state.current_tab == "Knowledge and Documents":
 
 elif st.session_state.current_tab == "Past Chats Archive":
     st.markdown("### Past Chats Archive Matrix")
+    
+    # CONTAINER PANEL A: Keep your interactive download/export table
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     try:
         archive_df = pd.read_sql("SELECT created_at AS \"Date Created\", title AS \"Conversation Thread Name\" FROM chat_sessions ORDER BY created_at DESC;", db_engine)
@@ -236,6 +238,31 @@ elif st.session_state.current_tab == "Past Chats Archive":
         st.markdown("🔒 *Timeline logging index paused on active live standby mode.*")
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # CONTAINER PANEL B: Add a dedicated database thread manager layer right underneath
+    st.markdown("### Database Thread Manager")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    try:
+        action_df = pd.read_sql("SELECT created_at, title, session_id FROM chat_sessions ORDER BY created_at DESC;", db_engine)
+        if not action_df.empty:
+            for _, row in action_df.iterrows():
+                date_str = str(row['created_at'])[:16]
+                title_str = row['title']
+                sess_id = row['session_id']
+                
+                col_info, col_action = st.columns([4, 1])
+                with col_info:
+                    st.write(f"📅 `{date_str}` 💬 **{title_str}**")
+                with col_action:
+                    if st.button("Delete Thread ❌", key=f"del_mgr_{sess_id}", use_container_width=True):
+                        with db_engine.begin() as del_conn:
+                            del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
+                        st.rerun()
+                st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.3;'>", unsafe_allow_html=True)
+        else:
+            st.markdown("*No active database threads found.*")
+    except Exception as e:
+        pass
+    st.markdown('</div>', unsafe_allow_html=True)
 elif st.session_state.current_tab == "Admin Dashboard":
     st.markdown("### Master Administrative Users Matrix")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
