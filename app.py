@@ -7,7 +7,6 @@ import pandas as pd
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
-
 st.markdown("""<style>
 div[data-testid="stHeader"], header { display: none !important; visibility: hidden !important; height: 0px !important; width: 0px !important; }
 [data-testid="stAppViewContainer"] { background-color: #ffffff !important; color: #111111 !important; padding-top: 20px !important; }
