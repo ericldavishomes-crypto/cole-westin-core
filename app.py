@@ -143,3 +143,103 @@ if st.session_state.current_tab.strip() == "Chat":
                     st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
                 else:
                     st.write(message["content"])
+                    # --- LIVE USER INPUT AND POSTGRESQL CHAT LOGGING PIPELINE ---
+    if prompt := st.chat_input("Speak directly to Cole..."):
+        with st.chat_message("user"):
+            st.write(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        try:
+            with db_engine.begin() as db_conn:
+                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
+        except Exception as db_err:
+            pass
+
+        compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
+
+        with st.chat_message("assistant"):
+            try:
+                response = client.chat.completions.create(
+                    model="deepseek/deepseek-chat",
+                    messages=compiled_messages,
+                    temperature=st.session_state.temperature,
+                    max_tokens=st.session_state.max_tokens,
+                    extra_body={
+                        "top_p": st.session_state.top_p,
+                        "top_k": st.session_state.top_k,
+                        "frequency_penalty": st.session_state.frequency_penalty,
+                        "presence_penalty": st.session_state.presence_penalty
+                    },
+                    stream=False
+                )
+                if hasattr(response, 'choices') and len(response.choices) > 0:
+                    reply = response.choices[0].message.content
+                else:
+                    reply = str(response)
+
+                reply = re.sub(r'\(.*?\)', '', reply)
+                reply = re.sub(r'\*.*?\*', '', reply).strip()
+                st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
+
+                try:
+                    if reply:
+                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                        payload = {"text": reply, "model_id": "eleven_flash_v2_5", "voice_settings": {"stability": 0.88, "similarity_boost": 0.75, "style": 0.00, "use_speaker_boost": True}}
+                        url = f"https://elevenlabs.io{EL_VOICE_ID}/stream"
+                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_128"}, stream=True)
+                        if audio_response.status_code == 200:
+                            st.audio(audio_response.content, format="audio/mp3", autoplay=True)
+                except Exception as tts_err:
+                    pass
+            except Exception as e:
+                reply = "System connection issue observed."
+
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        try:
+            with db_engine.begin() as db_conn:
+                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
+                current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
+                if current_title_check and current_title_check[0] == "New Chat":
+                    clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
+                    db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
+            st.rerun()
+        except Exception as db_err:
+            pass
+
+elif st.session_state.current_tab == "Controls and Parameters":
+    st.markdown("### Master Model Settings Desk")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.session_state.temperature = st.slider("Temperature (Creativity Dial)", 0.0, 1.5, st.session_state.temperature, 0.05)
+    st.session_state.max_tokens = st.slider("Max Tokens (Sentence Pacing Cap)", 50, 1000, st.session_state.max_tokens, 10)
+    st.session_state.top_p = st.slider("Top P (Nucleus Sampling)", 0.00, 1.00, st.session_state.top_p, 0.05)
+    st.session_state.top_k = st.slider("Top K (Vocabulary Pool Range)", 1, 100, st.session_state.top_k, 1)
+    st.session_state.frequency_penalty = st.slider("Frequency Penalty (Keyword Repeat Repression)", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
+    st.session_state.presence_penalty = st.slider("Presence Penalty (New Topic Expansion)", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.current_tab == "Knowledge and Documents":
+    st.markdown("### Intellectual Knowledge Vault Overview")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.markdown("🔒 *Knowledge local syncing modules paused on read-only cloud threads. Operational parameters are secure.*")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.current_tab == "Past Chats Archive":
+    st.markdown("### Past Chats Archive Matrix")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    try:
+        archive_df = pd.read_sql("SELECT created_at AS \"Date Created\", title AS \"Conversation Thread Name\" FROM chat_sessions ORDER BY created_at DESC;", db_engine)
+        if not archive_df.empty:
+            st.dataframe(archive_df, use_container_width=True, hide_index=True)
+        else:
+            st.markdown("*No archived conversation records found in PostgreSQL database ledger.*")
+    except Exception as e:
+        st.markdown("🔒 *Timeline logging index paused on active live standby mode.*")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.current_tab == "Admin Dashboard":
+    st.markdown("### Master Administrative Users Matrix")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.markdown(f"**Total Registered Profiles:** Users 2")
+    admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
+    st.markdown(admin_table_html, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
