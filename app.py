@@ -80,7 +80,7 @@ OPENROUTER_API_KEY = "sk-or-v1-2efff3c64949c51ad07f2be8977f619e8a54145f0df9fa0cd
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 
-client = OpenAI(base_url="https://openrouter.ai", api_key=str(OPENROUTER_API_KEY).strip())
+client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
 if st.session_state.current_session_id is None:
@@ -200,7 +200,7 @@ if st.session_state.current_tab.strip() == "Chat":
                         headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
                         payload = {
                             "text": reply, 
-                            "model_id": "eleven_turbo_v2_5_en", 
+                            "model_id": "eleven_turbo_v2_5", 
                             "voice_settings": {
                                 "stability": 0.65, 
                                 "similarity_boost": 0.85, 
