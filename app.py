@@ -200,19 +200,16 @@ if st.session_state.current_tab.strip() == "Chat":
                         }
                         url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
+                        
                         if audio_response.status_code == 200:
-                            # Check if initialized, then save the audio bytes safely to memory
-                            if "current_audio" not in st.session_state:
-                                st.session_state.current_audio = None
                             st.session_state.current_audio = audio_response.content
                         else:
-                try:
-                st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
-            except Exception as tts_err:
-                st.error(f"Voice Stream Pause: {tts_err}")
-                    
-            except Exception as e:
-                reply = "System connection issue observed."
+                            try:
+                                st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
+                            except Exception as tts_err:
+                                st.error(f"Voice Stream Pause: {tts_err}")
+                except Exception as e:
+                    reply = "System connection issue observed."
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
         try:
@@ -283,6 +280,7 @@ elif st.session_state.current_tab == "Past Chats Archive":
     except Exception as e:
         pass
     st.markdown('</div>', unsafe_allow_html=True)
+
 elif st.session_state.current_tab == "Admin Dashboard":
     st.markdown("### Master Administrative Users Matrix")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
