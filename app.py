@@ -187,7 +187,7 @@ if st.session_state.current_tab.strip() == "Chat":
                         headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
                         payload = {
                             "text": reply, 
-                            "model_id": "eleven_flash_v2_5_", 
+                            "model_id": "eleven_flash_v2_5", 
                             "voice_settings": {
                                 "stability": 0.65, 
                                 "similarity_boost": 0.85, 
