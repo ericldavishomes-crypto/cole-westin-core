@@ -7,6 +7,9 @@ import pandas as pd
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
+if st.session_state.get("current_audio"):
+    st.audio(st.session_state.current_audio, format="audio/mp3", autoplay=True)
+    st.session_state.current_audio = None
 st.markdown("""<style>
 header { background-color: transparent !important; box-shadow: none !important; }
 [data-testid="stAppViewContainer"] { background-color: #ffffff !important; color: #111111 !important; padding-top: 20px !important; }
