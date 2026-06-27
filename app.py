@@ -90,7 +90,7 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
-    if st.button("➕ New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
+    if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         with db_engine.begin() as conn:
@@ -126,11 +126,11 @@ col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     if st.button("Core Chat Workspace", use_container_width=True): st.session_state.current_tab = "Chat"
 with col2:
-    if st.button("Model Settings Desk", use_container_width=True): st.session_state.current_tab = "Controls and Parameters"
+    if st.button("Model Settings Desk", use_container_width=True): st.session_state.current_tab = "Past Chats Archive"
 with col3:
     if st.button("Knowledge Vault Overview", use_container_width=True): st.session_state.current_tab = "Knowledge and Documents"
 with col4:
-    if st.button("Past Chats Archive Matrix", use_container_width=True): st.session_state.current_tab = "Past Chats Archive"
+    if st.button("Past Chats Archive Matrix", use_container_width=True): st.session_state.current_tab = "Controls and Parameters"
 with col5:
     if st.button("Administrative Dashboard", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
 
@@ -274,9 +274,9 @@ elif st.session_state.current_tab == "Past Chats Archive":
                 
                 col_info, col_action = st.columns([4, 1])
                 with col_info:
-                    st.write(f"📅 `{date_str}` 💬 **{title_str}**")
+                    st.write(f" `{date_str}`  **{title_str}**")
                 with col_action:
-                    if st.button("Delete Thread ❌", key=f"del_mgr_{sess_id}", use_container_width=True):
+                    if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
                         with db_engine.begin() as del_conn:
                             del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
                         st.rerun()
