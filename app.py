@@ -156,7 +156,7 @@ if st.session_state.current_tab.strip() == "Chat":
                     st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
                 else:
                     st.write(message["content"])
- if prompt := st.chat_input("Speak directly to Cole..."):
+    if prompt := st.chat_input("Speak directly to Cole..."):
         with st.chat_message("user"):
             st.write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
