@@ -90,7 +90,7 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
-    if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
+    if st.button("➕ New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         with db_engine.begin() as conn:
@@ -104,6 +104,7 @@ with st.sidebar:
                 if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "Chat"
+                    st.session_state.messages = []  # Forces re-fetch for the targeted session
                     st.rerun()
     except Exception as e:
         st.text("History tracking offline...")
@@ -133,7 +134,7 @@ with col4:
 with col5:
     if st.button("Administrative Dashboard", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
 
-if "messages" not in st.session_state:
+if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
     try:
         with db_engine.begin() as conn:
@@ -156,6 +157,7 @@ if st.session_state.current_tab.strip() == "Chat":
                     st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
                 else:
                     st.write(message["content"])
+
     if prompt := st.chat_input("Speak directly to Cole..."):
         with st.chat_message("user"):
             st.write(prompt)
@@ -223,7 +225,7 @@ if st.session_state.current_tab.strip() == "Chat":
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
                 current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
-                if current_title_check and current_title_check == "New Chat":
+                if current_title_check and current_title_check[0] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
             st.rerun()
@@ -270,7 +272,7 @@ elif st.session_state.current_tab == "Past Chats Archive":
                 title_str = row['title']
                 sess_id = row['session_id']
                 
-                col_info, col_action = st.columns()
+                col_info, col_action = st.columns([4, 1])
                 with col_info:
                     st.write(f"📅 `{date_str}` 💬 **{title_str}**")
                 with col_action:
