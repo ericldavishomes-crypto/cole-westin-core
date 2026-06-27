@@ -197,10 +197,13 @@ if st.session_state.current_tab.strip() == "Chat":
                         }
                         url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
-                        if audio_response.status_code == 200:
-                            st.audio(audio_response.content, format="audio/mp3", autoplay=True)
-                        else:
-                            st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
+    if audio_response.status_code == 200:
+        # Check if initialized, then save the audio bytes safely to memory
+        if "current_audio" not in st.session_state:
+            st.session_state.current_audio = None
+        st.session_state.current_audio = audio_response.content
+    else:
+        st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
                 except Exception as tts_err:
                     st.error(f"Voice Stream Pause: {tts_err}")
                     
