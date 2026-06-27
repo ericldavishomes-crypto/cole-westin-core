@@ -7,9 +7,11 @@ import pandas as pd
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
+
 if st.session_state.get("current_audio"):
     st.audio(st.session_state.current_audio, format="audio/mp3", autoplay=True)
     st.session_state.current_audio = None
+
 st.markdown("""<style>
 header { background-color: transparent !important; box-shadow: none !important; }
 [data-testid="stAppViewContainer"] { background-color: #ffffff !important; color: #111111 !important; padding-top: 20px !important; }
@@ -43,7 +45,6 @@ if "current_session_id" not in st.session_state: st.session_state.current_sessio
 if "current_tab" not in st.session_state: st.session_state.current_tab = "Chat"
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
-
 
 @st.cache_resource
 def get_postgres_engine():
@@ -79,7 +80,7 @@ OPENROUTER_API_KEY = "sk-or-v1-2efff3c64949c51ad07f2be8977f619e8a54145f0df9fa0cd
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 
-client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
+client = OpenAI(base_url="https://openrouter.ai", api_key=str(OPENROUTER_API_KEY).strip())
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
 if st.session_state.current_session_id is None:
@@ -95,51 +96,59 @@ with st.sidebar:
         with db_engine.begin() as conn:
             conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
         st.rerun()
-    st.markdown("<hr style='margin: 15px 0; border-color: #e5e5e7;'>", unsafe_allow_html=True)
+
     try:
-        sessions_df = pd.read_sql("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;", db_engine)
-        for _, row in sessions_df.iterrows():
-            is_active = (row['session_id'] == st.session_state.current_session_id)
-            btn_label = f" {row['title']}" if is_active else f" {row['title']}"
-            if st.button(btn_label, key=f"side_sess_{row['session_id']}", use_container_width=True):
-                st.session_state.current_session_id = row['session_id']
-                with db_engine.connect() as conn:
-                    result = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": row['session_id']}).fetchall()
-                st.session_state.messages = [{"role": "system", "content": system_prompt}]
-                for m in result:
-                    st.session_state.messages.append({"role": m[0], "content": m[1]})
-                st.rerun()
+        with db_engine.begin() as conn:
+            sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
+            for s in sessions:
+                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                    st.session_state.current_session_id = s[0]
+                    st.session_state.current_tab = "Chat"
+                    st.rerun()
     except Exception as e:
         st.text("History tracking offline...")
 
+    try:
+        with db_engine.begin() as purge_conn:
+            purge_conn.execute(text("""
+                DELETE FROM chat_sessions 
+                WHERE title = 'New Chat' 
+                AND created_at < NOW() - INTERVAL '1 minute'
+                AND session_id NOT IN (SELECT DISTINCT session_id FROM chat_messages);
+            """))
+    except Exception as e:
+        pass
+
 st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True)
 
-c1, c2, c3, c4, c5 = st.columns(5)
-with c1:
-    if st.button("Chat", key="nav_btn_chat", use_container_width=True): st.session_state.current_tab = "Chat"
-with c2:
-    if st.button("Past Chats Archive", key="nav_btn_archive", use_container_width=True): st.session_state.current_tab = "Past Chats Archive"
-with c3:
-    if st.button("Knowledge and Documents", key="nav_btn_knowledge", use_container_width=True): st.session_state.current_tab = "Knowledge and Documents"
-with c4:
-    if st.button("Controls and Parameters", key="nav_btn_controls", use_container_width=True): st.session_state.current_tab = "Controls and Parameters"
-with c5:
-    if st.button("Admin Dashboard", key="nav_btn_admin", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
-st.markdown("<hr style='margin-top:10px; margin-bottom:30px; border-color:#e5e5e7;'>", unsafe_allow_html=True)
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    if st.button("Core Chat Workspace", use_container_width=True): st.session_state.current_tab = "Chat"
+with col2:
+    if st.button("Model Settings Desk", use_container_width=True): st.session_state.current_tab = "Controls and Parameters"
+with col3:
+    if st.button("Knowledge Vault Overview", use_container_width=True): st.session_state.current_tab = "Knowledge and Documents"
+with col4:
+    if st.button("Past Chats Archive Matrix", use_container_width=True): st.session_state.current_tab = "Past Chats Archive"
+with col5:
+    if st.button("Administrative Dashboard", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    try:
+        with db_engine.begin() as conn:
+            db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
+            if db_msgs:
+                for m in db_msgs:
+                    st.session_state.messages.append({"role": m[0], "content": m[1]})
+            else:
+                st.session_state.messages = [{"role": "system", "content": system_prompt}]
+    except Exception as e:
+        st.session_state.messages = [{"role": "system", "content": system_prompt}]
 
 st.session_state.initial_sidebar_state = "expanded"
 
 if st.session_state.current_tab.strip() == "Chat":
-    if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "system", "content": system_prompt}]
-        try:
-            with db_engine.connect() as conn:
-                result = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
-            for m in result:
-                st.session_state.messages.append({"role": m[0], "content": m[1]})
-        except Exception as e:
-            pass
-
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
@@ -147,8 +156,7 @@ if st.session_state.current_tab.strip() == "Chat":
                     st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
                 else:
                     st.write(message["content"])
-                    # --- LIVE USER INPUT AND POSTGRESQL CHAT LOGGING PIPELINE ---
-    if prompt := st.chat_input("Speak directly to Cole..."):
+ if prompt := st.chat_input("Speak directly to Cole..."):
         with st.chat_message("user"):
             st.write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -177,7 +185,7 @@ if st.session_state.current_tab.strip() == "Chat":
                     stream=False
                 )
                 if hasattr(response, 'choices') and len(response.choices) > 0:
-                    reply = response.choices[0].message.content
+                    reply = response.choices.message.content
                 else:
                     reply = str(response)
 
@@ -190,7 +198,7 @@ if st.session_state.current_tab.strip() == "Chat":
                         headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
                         payload = {
                             "text": reply, 
-                            "model_id": "eleven_flash_v2_5", 
+                            "model_id": "eleven_turbo_v2_5_en", 
                             "voice_settings": {
                                 "stability": 0.65, 
                                 "similarity_boost": 0.85, 
@@ -198,25 +206,24 @@ if st.session_state.current_tab.strip() == "Chat":
                                 "use_speaker_boost": True
                             }
                         }
-                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                        url = f"https://elevenlabs.io{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
-                        
                         if audio_response.status_code == 200:
                             st.session_state.current_audio = audio_response.content
+                            st.audio(audio_response.content, format="audio/mp3", autoplay=True)
                         else:
-                            try:
-                                st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
-                            except Exception as tts_err:
-                                st.error(f"Voice Stream Pause: {tts_err}")
-                except Exception as e:
-                    reply = "System connection issue observed."
+                            st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
+                except Exception as tts_err:
+                    st.error(f"Voice Stream Pause: {tts_err}")
+            except Exception as e:
+                reply = "System connection issue observed."
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
         try:
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
                 current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
-                if current_title_check and current_title_check[0] == "New Chat":
+                if current_title_check and current_title_check == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
             st.rerun()
@@ -242,8 +249,6 @@ elif st.session_state.current_tab == "Knowledge and Documents":
 
 elif st.session_state.current_tab == "Past Chats Archive":
     st.markdown("### Past Chats Archive Matrix")
-    
-    # CONTAINER PANEL A: Keep your interactive download/export table
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     try:
         archive_df = pd.read_sql("SELECT created_at AS \"Date Created\", title AS \"Conversation Thread Name\" FROM chat_sessions ORDER BY created_at DESC;", db_engine)
@@ -255,7 +260,6 @@ elif st.session_state.current_tab == "Past Chats Archive":
         st.markdown("🔒 *Timeline logging index paused on active live standby mode.*")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # CONTAINER PANEL B: Add a dedicated database thread manager layer right underneath
     st.markdown("### Database Thread Manager")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     try:
@@ -266,11 +270,11 @@ elif st.session_state.current_tab == "Past Chats Archive":
                 title_str = row['title']
                 sess_id = row['session_id']
                 
-                col_info, col_action = st.columns([4, 1])
+                col_info, col_action = st.columns()
                 with col_info:
-                    st.write(f" `{date_str}`  **{title_str}**")
+                    st.write(f"📅 `{date_str}` 💬 **{title_str}**")
                 with col_action:
-                    if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
+                    if st.button("Delete Thread ❌", key=f"del_mgr_{sess_id}", use_container_width=True):
                         with db_engine.begin() as del_conn:
                             del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
                         st.rerun()
@@ -288,3 +292,6 @@ elif st.session_state.current_tab == "Admin Dashboard":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+
+
