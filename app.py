@@ -185,13 +185,24 @@ if st.session_state.current_tab.strip() == "Chat":
                 try:
                     if reply:
                         headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                        payload = {"text": reply, "model_id": "eleven_flash_v2_5", "voice_settings": {"stability": 0.88, "similarity_boost": 0.75, "style": 0.00, "use_speaker_boost": True}}
+                        payload = {
+                            "text": reply, 
+                            "model_id": "eleven_flash_v2.5_en", 
+                            "voice_settings": {
+                                "stability": 0.65, 
+                                "similarity_boost": 0.85, 
+                                "style": 0.00, 
+                                "use_speaker_boost": True
+                            }
+                        }
                         url = f"https://elevenlabs.io{EL_VOICE_ID}/stream"
-                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_128"}, stream=True)
+                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
                             st.audio(audio_response.content, format="audio/mp3", autoplay=True)
+                        else:
+                            st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
                 except Exception as tts_err:
-                    pass
+                    st.error(f"Voice Stream Pause: {tts_err}")
             except Exception as e:
                 reply = "System connection issue observed."
 
