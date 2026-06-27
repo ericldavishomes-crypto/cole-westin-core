@@ -201,8 +201,9 @@ if st.session_state.current_tab.strip() == "Chat":
                             st.audio(audio_response.content, format="audio/mp3", autoplay=True)
                         else:
                             st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
-                except Exception as tts_err:
+            except Exception as tts_err:
                     st.error(f"Voice Stream Pause: {tts_err}")
+                    
             except Exception as e:
                 reply = "System connection issue observed."
 
