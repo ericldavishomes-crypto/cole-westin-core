@@ -207,27 +207,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 reply = re.sub(r'\*.*?\*', '', reply).strip()
                 
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
-                # ======================================================================
-                # SAVING TRANSACTION MATRIX: COMMITS DIRECTLY TO POSTGRESQL POOLS
-                # ======================================================================
-                try:
-                    with conn.session as session:
-                        session.execute(
-                            text("INSERT INTO chat_sessions (session_id, title) VALUES (:sess_id, :title) ON CONFLICT (session_id) DO NOTHING;"),
-                            {"sess_id": st.session_state.current_session_id, "title": f"Session - {st.session_state.current_session_id}"}
-                        )
-                        session.execute(
-                            text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sess_id, :role, :msg);"),
-                            {"sess_id": st.session_state.current_session_id, "role": "user", "msg": prompt}
-                        )
-                        session.execute(
-                            text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sess_id, :role, :msg);"),
-                            {"sess_id": st.session_state.current_session_id, "role": "assistant", "msg": reply}
-                        )
-                        session.commit()
-                except Exception:
-                    pass
-                # ======================================================================
+                 
 
                 # 🎙️ NATIVE MULTI-STREAMING ELEVENLABS TUNNEL [docs.elevenlabs.io]
                 try:
@@ -331,3 +311,4 @@ elif st.session_state.current_tab == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
