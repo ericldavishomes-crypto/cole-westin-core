@@ -155,7 +155,7 @@ if "messages" not in st.session_state or not st.session_state.messages:
 
 st.session_state.initial_sidebar_state = "expanded"
 
-if st.session_state.current_tab.strip() == "Chat":
+if st.session_state.current_tab.strip() == "New Chat":
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
@@ -164,16 +164,7 @@ if st.session_state.current_tab.strip() == "Chat":
                 else:
                     st.write(message["content"])
 
-    if prompt := st.chat_input("Speak directly to Cole..."):
-        with st.chat_message("user"):
-            st.write(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        try:
-            with db_engine.begin() as db_conn:
-                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
-        except Exception as db_err:
-            pass
+    
 
         compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
 
@@ -193,7 +184,7 @@ if st.session_state.current_tab.strip() == "Chat":
                     stream=False
                 )
                 if hasattr(response, 'choices') and len(response.choices) > 0:
-                    reply = response.choices.message.content
+                    reply = response.choices[0].message.content
                 else:
                     reply = str(response)
 
@@ -214,7 +205,7 @@ if st.session_state.current_tab.strip() == "Chat":
                                 "use_speaker_boost": True
                             }
                         }
-                        url = f"https://elevenlabs.io{EL_VOICE_ID}/stream"
+                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
                             st.session_state.current_audio = audio_response.content
@@ -234,7 +225,7 @@ if st.session_state.current_tab.strip() == "Chat":
                 if current_title_check and current_title_check[0] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
-            st.rerun()
+           
         except Exception as db_err:
             pass
 
@@ -300,6 +291,18 @@ elif st.session_state.current_tab == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+if prompt := st.chat_input("Speak directly to Cole..."):
+    with st.chat_message("user"):
+        st.write(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    try:
+        with db_engine.begin() as db_conn:
+            db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
+    except Exception as db_err:
+        pass
+    
+
 
 
 
