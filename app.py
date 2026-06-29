@@ -220,7 +220,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                                 "use_speaker_boost": True
                             }
                         }
-                        url = f"https://elevenlabs.io{EL_VOICE_ID}/stream"
+                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
                             st.session_state.current_audio = audio_response.content
