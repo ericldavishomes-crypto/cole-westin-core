@@ -124,15 +124,15 @@ st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Co
 
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
-    if st.button("Core Chat Workspace", use_container_width=True): st.session_state.current_tab = "Chat"
+    if st.button("New Chat", use_container_width=True): st.session_state.current_tab = "New Chat"
 with col2:
-    if st.button("Model Settings Desk", use_container_width=True): st.session_state.current_tab = "Past Chats Archive"
+    if st.button("Knowledge", use_container_width=True): st.session_state.current_tab = "Knowledge"
 with col3:
-    if st.button("Knowledge Vault Overview", use_container_width=True): st.session_state.current_tab = "Knowledge and Documents"
+    if st.button("Advanced Parameters", use_container_width=True): st.session_state.current_tab = "Advanced Parameters"
 with col4:
-    if st.button("Past Chats Archive Matrix", use_container_width=True): st.session_state.current_tab = "Controls and Parameters"
+    if st.button("Archived Chats", use_container_width=True): st.session_state.current_tab = "Archived Chats"
 with col5:
-    if st.button("Administrative Dashboard", use_container_width=True): st.session_state.current_tab = "Admin Dashboard"
+    if st.button("Administrative Panel", use_container_width=True): st.session_state.current_tab = "Administrative Panel"
 
 if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
@@ -232,8 +232,8 @@ if st.session_state.current_tab.strip() == "Chat":
         except Exception as db_err:
             pass
 
-elif st.session_state.current_tab == "Controls and Parameters":
-    st.markdown("### Master Model Settings Desk")
+elif st.session_state.current_tab == "Advanced Parameters":
+    st.markdown("### Advanced Parameters")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     st.session_state.temperature = st.slider("Temperature (Creativity Dial)", 0.0, 1.5, st.session_state.temperature, 0.05)
     st.session_state.max_tokens = st.slider("Max Tokens (Sentence Pacing Cap)", 50, 1000, st.session_state.max_tokens, 10)
@@ -243,14 +243,14 @@ elif st.session_state.current_tab == "Controls and Parameters":
     st.session_state.presence_penalty = st.slider("Presence Penalty (New Topic Expansion)", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.current_tab == "Knowledge and Documents":
-    st.markdown("### Intellectual Knowledge Vault Overview")
+elif st.session_state.current_tab == "Knowledge":
+    st.markdown("### Knowledge")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     st.markdown("🔒 *Knowledge local syncing modules paused on read-only cloud threads. Operational parameters are secure.*")
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.current_tab == "Past Chats Archive":
-    st.markdown("### Past Chats Archive Matrix")
+elif st.session_state.current_tab == "Archived Chats":
+    st.markdown("### Archived Chats")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     try:
         archive_df = pd.read_sql("SELECT created_at AS \"Date Created\", title AS \"Conversation Thread Name\" FROM chat_sessions ORDER BY created_at DESC;", db_engine)
@@ -287,8 +287,8 @@ elif st.session_state.current_tab == "Past Chats Archive":
         pass
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.current_tab == "Admin Dashboard":
-    st.markdown("### Master Administrative Users Matrix")
+elif st.session_state.current_tab == "Administrative Panel":
+    st.markdown("### Administrative Panel")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     st.markdown(f"**Total Registered Profiles:** Users 2")
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
