@@ -4,16 +4,15 @@ import re
 import base64
 import requests
 import asyncio
-from openai import OpenAI 
+from openai import OpenAI
 import datetime
-from sqlalchemy import text
-from datetime import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
 
+# Handle autoplay session state for conversational playback tracks [docs.streamlit.io]
 if st.session_state.get("current_audio"):
     st.audio(st.session_state.current_audio, format="audio/mp3", autoplay=True)
     st.session_state.current_audio = None
@@ -86,18 +85,18 @@ OPENROUTER_API_KEY = "sk-or-v1-2efff3c64949c51ad07f2be8977f619e8a54145f0df9fa0cd
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 
-client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
+client = OpenAI(base_url="https://openrouter.ai", api_key=str(OPENROUTER_API_KEY).strip())
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
 if st.session_state.current_session_id is None:
-    st.session_state.current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     with db_engine.begin() as conn:
         conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
     if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
-        st.session_state.current_session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         with db_engine.begin() as conn:
             conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
@@ -107,10 +106,10 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
-                    st.session_state.current_tab = "Chat"
-                    st.session_state.messages = []  # Forces re-fetch for the targeted session
+                    st.session_state.current_tab = "New Chat"
+                    st.session_state.messages = []  # Forces re-fetch for targeted session [docs.streamlit.io]
                     st.rerun()
     except Exception as e:
         st.text("History tracking offline...")
@@ -118,8 +117,8 @@ with st.sidebar:
     try:
         with db_engine.begin() as purge_conn:
             purge_conn.execute(text("""
-                DELETE FROM chat_sessions 
-                WHERE title = 'New Chat' 
+                DELETE FROM chat_sessions
+                WHERE title = 'New Chat'
                 AND created_at < NOW() - INTERVAL '1 minute'
                 AND session_id NOT IN (SELECT DISTINCT session_id FROM chat_messages);
             """))
@@ -140,6 +139,7 @@ with col4:
 with col5:
     if st.button("Administrative Panel", use_container_width=True): st.session_state.current_tab = "Administrative Panel"
 
+# Synchronize session messages array from database if current tab cache is empty [docs.streamlit.io]
 if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
     try:
@@ -156,6 +156,7 @@ if "messages" not in st.session_state or not st.session_state.messages:
 st.session_state.initial_sidebar_state = "expanded"
 
 if st.session_state.current_tab.strip() == "New Chat":
+    # 1. PURE HISTORY MATRIX LOOP: Draws historical log content ONLY (Zero Voice Execution) [docs.streamlit.io]
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
@@ -164,10 +165,22 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     st.write(message["content"])
 
-    
+    # 2. SEPARATED INTERFACE INPUT NODE [docs.streamlit.io]
+    if prompt := st.chat_input("Speak directly to Cole..."):
+        with st.chat_message("user"):
+            st.write(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        try:
+            with db_engine.begin() as db_conn:
+                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
+        except Exception as db_err:
+            pass
 
+        # Compile historical text payloads into OpenRouter's system context window
         compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
 
+        # 3. FRESH LIVE GENERATION CHAMBER: Fires strictly once upon submission [docs.streamlit.io]
         with st.chat_message("assistant"):
             try:
                 response = client.chat.completions.create(
@@ -190,22 +203,24 @@ if st.session_state.current_tab.strip() == "New Chat":
 
                 reply = re.sub(r'\(.*?\)', '', reply)
                 reply = re.sub(r'\*.*?\*', '', reply).strip()
+                
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
+                # 🎙️ NATIVE MULTI-STREAMING ELEVENLABS TUNNEL [docs.elevenlabs.io]
                 try:
                     if reply:
                         headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
                         payload = {
-                            "text": reply, 
-                            "model_id": "eleven_turbo_v2_5", 
+                            "text": reply,
+                            "model_id": "eleven_turbo_v2_5",
                             "voice_settings": {
-                                "stability": 0.65, 
-                                "similarity_boost": 0.85, 
-                                "style": 0.00, 
+                                "stability": 0.65,
+                                "similarity_boost": 0.85,
+                                "style": 0.00,
                                 "use_speaker_boost": True
                             }
                         }
-                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                        url = f"https://elevenlabs.io{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
                             st.session_state.current_audio = audio_response.content
@@ -214,10 +229,12 @@ if st.session_state.current_tab.strip() == "New Chat":
                             st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
                 except Exception as tts_err:
                     st.error(f"Voice Stream Pause: {tts_err}")
+                    
             except Exception as e:
                 reply = "System connection issue observed."
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
+        
         try:
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
@@ -291,18 +308,3 @@ elif st.session_state.current_tab == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-if prompt := st.chat_input("Speak directly to Cole..."):
-    with st.chat_message("user"):
-        st.write(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    
-    try:
-        with db_engine.begin() as db_conn:
-            db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
-    except Exception as db_err:
-        pass
-    
-
-
-
-
