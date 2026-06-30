@@ -238,8 +238,8 @@ if st.session_state.current_tab.strip() == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
                     st.rerun()  # Now safely tucked inside the 'New Chat' renaming gate strictly
-            except Exception as db_err:
-                    pass
+        except Exception as db_err:
+                   pass
 
 elif st.session_state.current_tab == "Advanced Parameters":
     st.markdown("### Advanced Parameters")
