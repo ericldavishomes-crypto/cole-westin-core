@@ -102,7 +102,7 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []  # Forces re-fetch for targeted session
@@ -216,9 +216,9 @@ if st.session_state.current_tab.strip() == "New Chat":
                         url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
-                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                            audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
-                            st.markdown(audio_html, unsafe_allow_html=True)
+                    b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                    audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
+                    st.markdown(audio_html, unsafe_allow_html=True)
                         else:
                             st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
                 except Exception as tts_err:
@@ -237,6 +237,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 if current_title_check and current_title_check[0] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
+                 st.rerun()  # Now safely tucked inside the 'New Chat' renaming gate strictly
             st.rerun()
         except Exception as db_err:
             pass
