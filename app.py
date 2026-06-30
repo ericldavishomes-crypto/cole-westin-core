@@ -156,7 +156,7 @@ if "messages" not in st.session_state or not st.session_state.messages:
 st.session_state.initial_sidebar_state = "expanded"
 
 if st.session_state.current_tab.strip() == "New Chat":
-    # 1. PURE HISTORY MATRIX LOOP: Draws historical log content ONLY (Zero Voice Execution) [docs.streamlit.io]
+    # 1. VISUAL HISTORY LOOP: Draws the historical log content safely [docs.streamlit.io]
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
@@ -171,18 +171,17 @@ if st.session_state.current_tab.strip() == "New Chat":
             st.write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
         
+        # Lock user text to Postgres disk instantly upon hitting Enter [docs.streamlit.io]
         try:
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
-                # FORCE TRANSACTIONS TO COMMIT IMMEDIATELY TO DISK [docs.streamlit.io]
-                db_conn.commit()
         except Exception as db_err:
             pass
 
-        # Compile historical text payloads into OpenRouter's system context window
+        # Compile historical conversational context for OpenRouter
         compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
 
-        # 3. FRESH LIVE GENERATION CHAMBER: Fires strictly once upon submission [docs.streamlit.io]
+        # 3. FRESH LIVE GENERATION CHAMBER: Fires strictly once per submission [docs.streamlit.io]
         with st.chat_message("assistant"):
             try:
                 response = client.chat.completions.create(
@@ -203,11 +202,11 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     reply = str(response)
 
+                # Standard text regex filters to keep delivery natural [docs.streamlit.io]
                 reply = re.sub(r'\(.*?\)', '', reply)
                 reply = re.sub(r'\*.*?\*', '', reply).strip()
                 
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
-                 
 
                 # 🎙️ NATIVE MULTI-STREAMING ELEVENLABS TUNNEL [docs.elevenlabs.io]
                 try:
@@ -236,11 +235,14 @@ if st.session_state.current_tab.strip() == "New Chat":
             except Exception as e:
                 reply = "System connection issue observed."
 
+        # Commit Assistant response to memory states and permanent database [docs.streamlit.io]
         st.session_state.messages.append({"role": "assistant", "content": reply})
         
         try:
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
+                
+                # AUTOMATED SIDEBAR THREAD AUTO-NAMING ENGINE [docs.streamlit.io]
                 current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
                 if current_title_check and current_title_check[0] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
@@ -311,4 +313,3 @@ elif st.session_state.current_tab == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
