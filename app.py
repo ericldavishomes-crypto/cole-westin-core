@@ -12,11 +12,6 @@ import pandas as pd
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
 
-# Handle autoplay session state for conversational playback tracks
-if st.session_state.get("current_audio"):
-    st.audio(st.session_state.current_audio, format="audio/mp3", autoplay=True)
-    st.session_state.current_audio = None
-
 st.markdown("""<style>
 header { background-color: transparent !important; box-shadow: none !important; }
 [data-testid="stAppViewContainer"] { background-color: #ffffff !important; color: #111111 !important; padding-top: 20px !important; }
@@ -107,7 +102,7 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []  # Forces re-fetch for targeted session
@@ -221,8 +216,9 @@ if st.session_state.current_tab.strip() == "New Chat":
                         url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
-                            st.session_state.current_audio = audio_response.content
-                            st.audio(audio_response.content, format="audio/mp3", autoplay=True)
+                    b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                    audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
+                    st.markdown(audio_html, unsafe_allow_html=True)
                         else:
                             st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
                 except Exception as tts_err:
