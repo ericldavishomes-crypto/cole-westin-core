@@ -216,9 +216,9 @@ if st.session_state.current_tab.strip() == "New Chat":
                         url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                         audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                         if audio_response.status_code == 200:
-                    b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                    audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
-                    st.markdown(audio_html, unsafe_allow_html=True)
+                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                            audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
+                            st.markdown(audio_html, unsafe_allow_html=True)
                         else:
                             st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
                 except Exception as tts_err:
