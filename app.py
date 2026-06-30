@@ -174,6 +174,8 @@ if st.session_state.current_tab.strip() == "New Chat":
         # Lock user text to Postgres disk instantly upon hitting Enter [docs.streamlit.io]
         try:
             with db_engine.begin() as db_conn:
+                # Force PostgreSQL to register this session thread identity permanently [docs.streamlit.io]
+                db_conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
         except Exception as db_err:
             pass
