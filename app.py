@@ -12,7 +12,7 @@ import pandas as pd
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
 
-# Handle autoplay session state for conversational playback tracks [docs.streamlit.io]
+# Handle autoplay session state for conversational playback tracks
 if st.session_state.get("current_audio"):
     st.audio(st.session_state.current_audio, format="audio/mp3", autoplay=True)
     st.session_state.current_audio = None
@@ -47,7 +47,7 @@ if "top_k" not in st.session_state: st.session_state.top_k = 50
 if "frequency_penalty" not in st.session_state: st.session_state.frequency_penalty = 0.00
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
-if "current_tab" not in st.session_state: st.session_state.current_tab = "Chat"
+if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat"
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
 
@@ -100,16 +100,17 @@ with st.sidebar:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         with db_engine.begin() as conn:
             conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
+        st.session_state.current_tab = "New Chat"
         st.rerun()
 
     try:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
-                    st.session_state.messages = []  # Forces re-fetch for targeted session [docs.streamlit.io]
+                    st.session_state.messages = []  # Forces re-fetch for targeted session
                     st.rerun()
     except Exception as e:
         st.text("History tracking offline...")
@@ -119,7 +120,7 @@ with st.sidebar:
             purge_conn.execute(text("""
                 DELETE FROM chat_sessions
                 WHERE title = 'New Chat'
-                AND created_at < NOW() - INTERVAL '1 minute'
+                AND created_at < NOW() - INTERVAL '3 minutes'
                 AND session_id NOT IN (SELECT DISTINCT session_id FROM chat_messages);
             """))
     except Exception as e:
@@ -139,13 +140,14 @@ with col4:
 with col5:
     if st.button("Administrative Panel", use_container_width=True): st.session_state.current_tab = "Administrative Panel"
 
-# Synchronize session messages array from database if current tab cache is empty [docs.streamlit.io]
+# Dynamic database message sync chamber
 if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
     try:
         with db_engine.begin() as conn:
             db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
             if db_msgs:
+                st.session_state.messages = [{"role": "system", "content": system_prompt}]
                 for m in db_msgs:
                     st.session_state.messages.append({"role": m[0], "content": m[1]})
             else:
@@ -156,7 +158,6 @@ if "messages" not in st.session_state or not st.session_state.messages:
 st.session_state.initial_sidebar_state = "expanded"
 
 if st.session_state.current_tab.strip() == "New Chat":
-    # 1. VISUAL HISTORY LOOP: Draws the historical log content safely [docs.streamlit.io]
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
@@ -165,25 +166,20 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     st.write(message["content"])
 
-    # 2. SEPARATED INTERFACE INPUT NODE [docs.streamlit.io]
     if prompt := st.chat_input("Speak directly to Cole..."):
         with st.chat_message("user"):
             st.write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # Lock user text to Postgres disk instantly upon hitting Enter [docs.streamlit.io]
         try:
             with db_engine.begin() as db_conn:
-                # Force PostgreSQL to register this session thread identity permanently [docs.streamlit.io]
                 db_conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
         except Exception as db_err:
             pass
 
-        # Compile historical conversational context for OpenRouter
         compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
 
-        # 3. FRESH LIVE GENERATION CHAMBER: Fires strictly once per submission [docs.streamlit.io]
         with st.chat_message("assistant"):
             try:
                 response = client.chat.completions.create(
@@ -204,13 +200,11 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     reply = str(response)
 
-                # Standard text regex filters to keep delivery natural [docs.streamlit.io]
                 reply = re.sub(r'\(.*?\)', '', reply)
                 reply = re.sub(r'\*.*?\*', '', reply).strip()
                 
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
-                # 🎙️ NATIVE MULTI-STREAMING ELEVENLABS TUNNEL [docs.elevenlabs.io]
                 try:
                     if reply:
                         headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
@@ -237,19 +231,17 @@ if st.session_state.current_tab.strip() == "New Chat":
             except Exception as e:
                 reply = "System connection issue observed."
 
-        # Commit Assistant response to memory states and permanent database [docs.streamlit.io]
         st.session_state.messages.append({"role": "assistant", "content": reply})
         
         try:
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
                 
-                # AUTOMATED SIDEBAR THREAD AUTO-NAMING ENGINE [docs.streamlit.io]
                 current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
                 if current_title_check and current_title_check[0] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
-                    st.rerun()
+            st.rerun()
         except Exception as db_err:
             pass
 
