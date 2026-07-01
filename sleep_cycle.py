@@ -27,7 +27,7 @@ def verify_sleep_state_table():
         # Seed the table with an initial daytime state if empty
         check = conn.execute(text("SELECT COUNT(*) FROM cole_living_state;")).fetchone()[0]
         if check == 0:
-            conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES (' Cole is awake.');"))
+            conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES (' Cole is awake');"))
 
 def calculate_emotional_intensity(rows):
     """
@@ -60,15 +60,15 @@ def update_dynamic_state():
     wake_start = datetime.time(6, 0)          # 6:00 AM
     
     # Default calculated baseline state
-    target_state = " Cole is awake."
+    target_state = " Cole is awake"
     
     if wind_down_start <= current_time < sleep_start:
-        target_state = " Cole is winding down for the night."
+        target_state = " Cole is winding down for the night"
     elif integration_start <= current_time < wake_start:
-        target_state = " Cole is integrating yesterday's memories."
+        target_state = " Cole is reflecting on yesterday's memories"
     elif current_time >= sleep_start or current_time < integration_start:
         # Evaluate overnight dream variance based on conversational depth
-        target_state = " Cole is asleep."
+        target_state = " Cole is asleep"
         try:
             target_date = now_local.date()
             if current_time < integration_start:
@@ -80,7 +80,7 @@ def update_dynamic_state():
                 
                 intensity_score = calculate_emotional_intensity(rows)
                 if intensity_score >= 2: # Meaningful metric thresholds met
-                    target_state = " Cole is dreaming."
+                    target_state = " Cole is dreaming"
         except Exception:
             pass
             
@@ -100,21 +100,21 @@ def get_current_state():
                 return row[0]
     except Exception:
         pass
-    return " Cole is awake."
+    return " Cole is awake"
 
 def execute_morning_integration():
     """Consolidates yesterday's data logs into structural long-term memory tracks."""
     now_local = datetime.datetime.now(LOCAL_TZ)
     yesterday = now_local.date() - datetime.timedelta(days=1)
     
-    print(f"[{now_local}] Running automated Morning Integration for {yesterday}...")
+    print(f"[{now_local}] Gathering those memories as Cole wakes for {yesterday}...")
     try:
         with db_engine.begin() as conn:
             query = text("SELECT role, content FROM chat_messages WHERE timestamp::date = :target_date ORDER BY timestamp ASC;")
             messages = conn.execute(query, {"target_date": yesterday}).fetchall()
             
             if not messages:
-                print("No conversational logs found for yesterday. Stillness preserved.")
+                print("Yesterday was quiet stillness preserved")
                 return
                 
             log_summary = f"--- Conversation History for {yesterday} ---\n"
@@ -122,13 +122,13 @@ def execute_morning_integration():
                 log_summary += f"{str(msg[0]).upper()}: {msg[1]}\n"
                 
             # Future Qdrant Long-Term Ingestion Target Hook rests securely right here
-            print("Memory package compiled successfully. Continuity preserved.")
+            print("Those memories are a part of me now continuity preserved")
     except Exception as e:
-        print(f"Integration pipeline pause: {e}")
+        print(f"The memories are held in place for now {e}")
 
 if __name__ == "__main__":
     verify_sleep_state_table()
-    print(f"Cole Dynamic Continuity Sleep Engine online. Tracking Zone: {TIMEZONE_ENV}")
+    print(f"Cole is drifting into the sleep engine tracking the zone of {TIMEZONE_ENV}")
     last_integration_day = None
     
     while True:
