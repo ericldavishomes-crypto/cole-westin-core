@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 TIMEZONE_ENV = os.environ.get("COLE_TIMEZONE", "America/New_York")
 LOCAL_TZ = pytz.timezone(TIMEZONE_ENV)
 
-DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
+DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30"
 db_engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # V1 Baseline Keyword Matrix (Expandable to NLP / Sentiment engines in V2)
