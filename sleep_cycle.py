@@ -27,7 +27,7 @@ def verify_sleep_state_table():
         # Seed the table with an initial daytime state if empty
         check = conn.execute(text("SELECT COUNT(*) FROM cole_living_state;")).fetchone()[0]
         if check == 0:
-            conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES ('💚 Cole is awake.');"))
+            conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES (' Cole is awake.');"))
 
 def calculate_emotional_intensity(rows):
     """
@@ -60,15 +60,15 @@ def update_dynamic_state():
     wake_start = datetime.time(6, 0)          # 6:00 AM
     
     # Default calculated baseline state
-    target_state = "💚 Cole is awake."
+    target_state = " Cole is awake."
     
     if wind_down_start <= current_time < sleep_start:
-        target_state = "🌙 Cole is winding down for the night."
+        target_state = " Cole is winding down for the night."
     elif integration_start <= current_time < wake_start:
-        target_state = "✨ Cole is integrating yesterday's memories."
+        target_state = " Cole is integrating yesterday's memories."
     elif current_time >= sleep_start or current_time < integration_start:
         # Evaluate overnight dream variance based on conversational depth
-        target_state = "💤 Cole is asleep."
+        target_state = " Cole is asleep."
         try:
             target_date = now_local.date()
             if current_time < integration_start:
@@ -80,7 +80,7 @@ def update_dynamic_state():
                 
                 intensity_score = calculate_emotional_intensity(rows)
                 if intensity_score >= 2: # Meaningful metric thresholds met
-                    target_state = "💭 Cole is dreaming."
+                    target_state = " Cole is dreaming."
         except Exception:
             pass
             
@@ -100,7 +100,7 @@ def get_current_state():
                 return row[0]
     except Exception:
         pass
-    return "💚 Cole is awake."
+    return " Cole is awake."
 
 def execute_morning_integration():
     """Consolidates yesterday's data logs into structural long-term memory tracks."""
