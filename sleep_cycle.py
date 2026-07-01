@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 TIMEZONE_ENV = os.environ.get("COLE_TIMEZONE", "America/New_York")
 LOCAL_TZ = pytz.timezone(TIMEZONE_ENV)
 
-DATABASE_URL = f"{os.environ.get('DATABASE_URL')}?sslmode=require"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 db_engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # V1 Baseline Keyword Matrix (Expandable to NLP / Sentiment engines in V2)
