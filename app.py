@@ -199,7 +199,7 @@ if st.session_state.current_tab.strip() == "New Chat":
 
                 reply = re.sub(r'\(.*?\)', '', reply)
                 reply = re.sub(r'\*.*?\*', '', reply).strip()
-                
+                reply = shield.clean_response(reply)
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
                 try:
