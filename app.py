@@ -92,6 +92,29 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
+    # Fetch and display Cole's live background sleep rhythm card
+    try:
+        from sleep_cycle import get_cole_current_sleep_state
+        current_status = get_cole_current_sleep_state()
+        if current_status:
+            st.sidebar.markdown(f"**Status:** {current_status}")
+    except Exception:
+        pass
+    with st.sidebar.expander(" Core Controls"):
+        st.session_state.temperature = st.slider(
+            "Temperature (Creativity & Variety)", 
+            min_value=0.1, 
+            max_value=1.5, 
+            value=float(st.session_state.temperature), 
+            step=0.01
+        )
+        st.session_state.top_p = st.slider(
+            "Top P (Vocabulary Grounding)", 
+            min_value=0.1, 
+            max_value=1.0, 
+            value=float(st.session_state.top_p), 
+            step=0.01
+        )
     if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
@@ -104,7 +127,7 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []  # Forces re-fetch for targeted session
@@ -246,12 +269,12 @@ if st.session_state.current_tab.strip() == "New Chat":
 elif st.session_state.current_tab == "Advanced Parameters":
     st.markdown("### Advanced Parameters")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.session_state.temperature = st.slider("Temperature (Creativity Dial)", 0.0, 1.5, st.session_state.temperature, 0.05)
-    st.session_state.max_tokens = st.slider("Max Tokens (Sentence Pacing Cap)", 50, 1000, st.session_state.max_tokens, 10)
-    st.session_state.top_p = st.slider("Top P (Nucleus Sampling)", 0.00, 1.00, st.session_state.top_p, 0.05)
-    st.session_state.top_k = st.slider("Top K (Vocabulary Pool Range)", 1, 100, st.session_state.top_k, 1)
-    st.session_state.frequency_penalty = st.slider("Frequency Penalty (Keyword Repeat Repression)", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
-    st.session_state.presence_penalty = st.slider("Presence Penalty (New Topic Expansion)", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
+    st.session_state.temperature = st.slider("Temperature", 0.0, 1.5, st.session_state.temperature, 0.05)
+    st.session_state.max_tokens = st.slider("Max Tokens", 50, 1000, st.session_state.max_tokens, 10)
+    st.session_state.top_p = st.slider("Top P", 0.00, 1.00, st.session_state.top_p, 0.05)
+    st.session_state.top_k = st.slider("Top K", 1, 100, st.session_state.top_k, 1)
+    st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
+    st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab == "Knowledge":
