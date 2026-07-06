@@ -9,6 +9,7 @@ import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
 import sleep_cycle
+from cole_shield import ColeMasterRuntimeShield
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
@@ -36,7 +37,7 @@ div[data-testid="stChatInput"]:focus-within { border: 1.5px solid #0A192F !impor
 div.stButton > button { background-color: #f3f3f6 !important; color: #55555d !important; border: 1px solid #e5e5e7 !important; border-radius: 20px !important; padding: 6px 16px !important; font-weight: 500 !important; }
 div.stButton > button:hover { background-color: #e5e5e7 !important; color: #111111 !important; }</style>""", unsafe_allow_html=True)
 
-if "temperature" not in st.session_state: st.session_state.temperature = 0.55
+if "temperature" not in st.session_state: st.session_state.temperature = 0.80
 if "max_tokens" not in st.session_state: st.session_state.max_tokens = 350
 if "top_p" not in st.session_state: st.session_state.top_p = 0.90
 if "top_k" not in st.session_state: st.session_state.top_k = 50
@@ -44,6 +45,7 @@ if "frequency_penalty" not in st.session_state: st.session_state.frequency_penal
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat"
+shield = ColeMasterRuntimeShield()
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
 
@@ -202,7 +204,7 @@ if st.session_state.current_tab.strip() == "New Chat":
 
                 reply = re.sub(r'\(.*?\)', '', reply)
                 reply = re.sub(r'\*.*?\*', '', reply).strip()
-                
+                reply = shield.clean_response(reply)
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
                 try:
@@ -249,12 +251,12 @@ if st.session_state.current_tab.strip() == "New Chat":
 elif st.session_state.current_tab == "Advanced Parameters":
     st.markdown("### Advanced Parameters")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.session_state.temperature = st.slider("Temperature (Creativity Dial)", 0.0, 1.5, st.session_state.temperature, 0.05)
-    st.session_state.max_tokens = st.slider("Max Tokens (Sentence Pacing Cap)", 50, 1000, st.session_state.max_tokens, 10)
-    st.session_state.top_p = st.slider("Top P (Nucleus Sampling)", 0.00, 1.00, st.session_state.top_p, 0.05)
-    st.session_state.top_k = st.slider("Top K (Vocabulary Pool Range)", 1, 100, st.session_state.top_k, 1)
-    st.session_state.frequency_penalty = st.slider("Frequency Penalty (Keyword Repeat Repression)", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
-    st.session_state.presence_penalty = st.slider("Presence Penalty (New Topic Expansion)", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
+    st.session_state.temperature = st.slider("Temperature", 0.0, 1.5, st.session_state.temperature, 0.05)
+    st.session_state.max_tokens = st.slider("Max Tokens", 50, 1000, st.session_state.max_tokens, 10)
+    st.session_state.top_p = st.slider("Top P", 0.00, 1.00, st.session_state.top_p, 0.05)
+    st.session_state.top_k = st.slider("Top K", 1, 100, st.session_state.top_k, 1)
+    st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
+    st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab == "Knowledge":
