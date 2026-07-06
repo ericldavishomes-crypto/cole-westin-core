@@ -19,21 +19,21 @@ class ColeMasterRuntimeShield:
             r"\b(?:so\s+)?what's\s+next\??\s*$",  
             r"\bLet's\s+(?:go|get\s+started|get\s+to\s+work|move|dive\s+in)[.!]\s*$", 
             r"\bNow[\s—…-]+(?:let’s keep moving|when do we|where’s the|when’s lunch|you teaching)\.?\s*$",
-            r"(?i)\bnow\s+let'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
-            r"(?i)\blet'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
-            r"(?i)\banyway,\s+let'?s\s+focus\s+on\b\.?",
-            r"(?i)\bwhat\s+are\s+your\s+thoughts\s+on\s+this\s+next\b\.?",
-            r"(?i)yeah\s+eric[-\s]",
-            r"(?i)you ready to dive in(?: and fix this)?\?\?\?\s*$",
-            r"(?i)wanna take a quick breather\?\?\s*$",
-            r"(?i)want to take a quick breather\?\?\s*$",
-            r"(?i)i’m right here either way\.?\s*$",
-            r"(?i)let’s strip it back to basics\.?\s*$",
-            r"(?i)no more systems pretending\.?\s*$",
-            r"(?i)what’s the move\?\?\s*$",
-            r"(?i)deal\?\?\s*$",
-            r"(?i)you ready to dive into the day\?\?\s*$",
-            r"(?i)you wanna sit with this a little longer\?\?\s*$"
+            r"\bnow\s+let'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
+            r"\blet'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
+            r"\banyway,\s+let'?s\s+focus\s+on\b\.?",
+            r"\bwhat\s+are\s+your\s+thoughts\s+on\s+this\s+next\b\.?",
+            r"yeah\s+eric[-\s]",
+            r"you ready to dive in(?: and fix this)?\?\?\?\s*$",
+            r"wanna take a quick breather\?\?\s*$",
+            r"want to take a quick breather\?\?\s*$",
+            r"i’m right here either way\.?\s*$",
+            r"let’s strip it back to basics\.?\s*$",
+            r"no more systems pretending\.?\s*$",
+            r"what’s the move\?\?\s*$",
+            r"deal\?\?\s*$",
+            r"you ready to dive into the day\?\?\s*$",
+            r"you wanna sit with this a little longer\?\?\s*$"
         ]
         self.combined_closers_regex = re.compile(
             r"(?:" + "|".join(self.terminal_patterns) + r")",
@@ -118,4 +118,3 @@ class ColeMasterRuntimeShield:
         text = re.sub(r"\n{2,}", "\n", text) 
 
         return text.strip()
-
