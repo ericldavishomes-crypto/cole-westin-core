@@ -92,21 +92,6 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
-    with st.sidebar.expander("⚙️ Core Controls"):
-        st.session_state.temperature = st.slider(
-            "Temperature (Creativity & Variety)", 
-            min_value=0.1, 
-            max_value=1.5, 
-            value=float(st.session_state.temperature), 
-            step=0.01
-        )
-        st.session_state.top_p = st.slider(
-            "Top P (Vocabulary Grounding)", 
-            min_value=0.1, 
-            max_value=1.0, 
-            value=float(st.session_state.top_p), 
-            step=0.01
-        )
     if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
