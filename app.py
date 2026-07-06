@@ -8,7 +8,7 @@ from openai import OpenAI
 import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
-import sleep_cycle
+from cole_shield import ColeMasterRuntimeShield
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
@@ -36,7 +36,7 @@ div[data-testid="stChatInput"]:focus-within { border: 1.5px solid #0A192F !impor
 div.stButton > button { background-color: #f3f3f6 !important; color: #55555d !important; border: 1px solid #e5e5e7 !important; border-radius: 20px !important; padding: 6px 16px !important; font-weight: 500 !important; }
 div.stButton > button:hover { background-color: #e5e5e7 !important; color: #111111 !important; }</style>""", unsafe_allow_html=True)
 
-if "temperature" not in st.session_state: st.session_state.temperature = 0.55
+if "temperature" not in st.session_state: st.session_state.temperature = 0.80
 if "max_tokens" not in st.session_state: st.session_state.max_tokens = 350
 if "top_p" not in st.session_state: st.session_state.top_p = 0.90
 if "top_k" not in st.session_state: st.session_state.top_k = 50
@@ -44,6 +44,7 @@ if "frequency_penalty" not in st.session_state: st.session_state.frequency_penal
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat"
+shield = ColeMasterRuntimeShield()
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
 
@@ -91,10 +92,6 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
-    status = sleep_cycle.get_current_state()
-    st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True)
-
-
     if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
@@ -107,7 +104,7 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f"💬 {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []  # Forces re-fetch for targeted session
