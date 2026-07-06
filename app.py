@@ -8,6 +8,7 @@ from openai import OpenAI
 import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
+import sleep_cycle
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
@@ -90,6 +91,10 @@ if st.session_state.current_session_id is None:
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
+    status = sleep_cycle.get_current_state()
+    st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True)
+
+
     if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
