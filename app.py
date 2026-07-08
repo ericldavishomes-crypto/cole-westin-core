@@ -134,16 +134,27 @@ with st.sidebar:
 st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5 = st.columns(5)
+
 with col1:
-    if st.button("New Chat", use_container_width=True): st.session_state.current_tab = "New Chat"
+    if st.button("New Chat", use_container_width=True, key="nav_btn_new_chat"):
+        st.session_state.current_tab = "New Chat"
+        st.rerun()
 with col2:
-    if st.button("Knowledge", use_container_width=True): st.session_state.current_tab = "Knowledge"
+    if st.button("Knowledge", use_container_width=True, key="nav_btn_knowledge"):
+        st.session_state.current_tab = "Knowledge"
+        st.rerun()
 with col3:
-    if st.button("Advanced Parameters", use_container_width=True): st.session_state.current_tab = "Advanced Parameters"
+    if st.button("Advanced Parameters", use_container_width=True, key="nav_btn_advanced"):
+        st.session_state.current_tab = "Advanced Parameters"
+        st.rerun()
 with col4:
-    if st.button("Archived Chats", use_container_width=True): st.session_state.current_tab = "Archived Chats"
+    if st.button("Archived Chats", use_container_width=True, key="nav_btn_archived"):
+        st.session_state.current_tab = "Archived Chats"
+        st.rerun()
 with col5:
-    if st.button("Administrative Panel", use_container_width=True): st.session_state.current_tab = "Administrative Panel"
+    if st.button("Administrative Panel", use_container_width=True, key="nav_btn_admin"):
+        st.session_state.current_tab = "Administrative Panel"
+        st.rerun()
 if st.session_state.current_tab.strip() != "New Chat":
     # If we are on Knowledge, do not run any chat logic. Skip straight to the bottom!
     pass
@@ -272,7 +283,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
     
     # Maps out your 5 specialized Qdrant collection names
     collections_map = {
-        "core_identity_continuity": "Core Identity & Continuity",
+        "core_identity_continuity": "Core Identity & Continuity",f
         "embodiment_deployment": "Embodiment & Deployment",
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
