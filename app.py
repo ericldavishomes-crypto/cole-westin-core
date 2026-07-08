@@ -286,18 +286,18 @@ elif st.session_state.current_tab == "Knowledge":
         
         for q_name, clean_name in collections_map.items():
             try:
-                # Query the database for this specific vault's statistics
                 col_desc = cole_knowledge.q_client.get_collection(collection_name=q_name)
                 vector_count = col_desc.points_count
             except Exception:
-                # Fallback if a specific collection hasn't been created yet
                 vector_count = 0
                 
-            col_a, col_b = st.columns([3, 1])
-            with col_a:
-                st.write(f"📂 Vault: **{clean_name}**")
-            with col_b:
-                st.code(f"{vector_count} Layers Loaded")
+            # Safely wrap the rows in a uniquely keyed container to avoid key clashes
+            with st.container(key=f"vault_row_{q_name}"):
+                col_a, col_b = st.columns([3, 1])
+                with col_a:
+                    st.write(f"📂 Vault: **{clean_name}**")
+                with col_b:
+                    st.code(f"{vector_count} Layers Loaded")
             st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
             
     except Exception as q_err:
