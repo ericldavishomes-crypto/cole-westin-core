@@ -100,7 +100,7 @@ with st.sidebar:
     st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True)
 
 
-    if st.button(" New Chat", use_container_width=True, key="sidebar_new_chat_trigger"):
+    if st.button(" New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
         with db_engine.begin() as conn:
@@ -112,7 +112,7 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}", use_container_width=True):
+                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}_{st.session_state.current_tab.strip()}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []  # Forces re-fetch for targeted session
