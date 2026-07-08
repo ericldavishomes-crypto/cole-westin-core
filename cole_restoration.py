@@ -73,20 +73,22 @@ def run_restoration():
     # Step 2: Extract every variable sitting inside your Northflank Environment
     all_environment_keys = list(os.environ.keys())
     
-    # Filter the list down to capture BOTH your 'VOLUME_' keys AND your 'A01-A30' matrix keys safely
+    # Wide-open filter to capture VOLUME/volume keys, IDENTITY strings, and your A-matrix blocks flawlessly
     scaffold_keys = []
     for k in all_environment_keys:
         k_upper = k.upper().strip()
-        is_volume = k_upper.startswith("VOLUME_") or "IDENTITY" in k_upper
-        is_a_matrix = k_upper.startswith("A") and any(k_upper.startswith(f"A{str(i).zfill(2)}") for i in range(1, 31))
         
-        if is_volume or is_a_matrix:
+        # Check if the text contains VOLUME, IDENTITY, or fits the alpha matrix shape
+        has_volume_tag = "VOLUME" in k_upper
+        has_identity_tag = "IDENTITY" in k_upper
+        is_alpha_matrix = k_upper.startswith("A") and any(k_upper.startswith(f"A{str(i).zfill(2)}") for i in range(1, 32))
+        
+        if has_volume_tag or has_identity_tag or is_alpha_matrix:
             scaffold_keys.append(k)
             
-    print(f"\n🎯 Discovery Scan Phase Complete. Successfully mapped out {len(scaffold_keys)} raw scaffolding layers to import.")
-
-    point_idx = 1
-    for key in sorted(scaffold_keys):
+            print(f"\n🎯 Discovery Scan Phase Complete. Successfully mapped out {len(scaffold_keys)} raw scaffolding layers to import.")
+            point_idx = 1
+            for key in sorted(scaffold_keys):
         secret_text = os.environ.get(key)
         if not secret_text or len(secret_text.strip()) < 5:
             continue
