@@ -263,7 +263,7 @@ elif st.session_state.current_tab == "Advanced Parameters":
     st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.current_tab == "Knowledge":
+elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Core Knowledge Architecture")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     
