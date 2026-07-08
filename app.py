@@ -145,11 +145,10 @@ with col4:
 with col5:
     if st.button("Administrative Panel", use_container_width=True): st.session_state.current_tab = "Administrative Panel"
 if st.session_state.current_tab.strip() != "New Chat":
-    # If the user is on Knowledge or any other tab, stop running the chat interface immediately!
+    # If we are on Knowledge, do not run any chat logic. Skip straight to the bottom!
     pass
 else:
-    # Otherwise, execute the chat engine normally
-    # Dynamic database message sync chamber
+    # Otherwise, we are on New Chat, so run the database synchronization safely
     if "messages" not in st.session_state or not st.session_state.messages:
         st.session_state.messages = []
     try:
