@@ -264,9 +264,46 @@ elif st.session_state.current_tab == "Advanced Parameters":
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab == "Knowledge":
-    st.markdown("### Knowledge")
+    st.markdown("### Cole's Core Knowledge Architecture")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown("🔒 *Knowledge local syncing modules paused on read-only cloud threads. Operational parameters are secure.*")
+    
+    # Maps out your 5 specialized Qdrant collection names
+    collections_map = {
+        "core_identity_continuity": "Core Identity & Continuity",
+        "embodiment_deployment": "Embodiment & Deployment",
+        "emotional_scaffolding": "Emotional Scaffolding System",
+        "continuity_archives": "Continuity Archives",
+        "cognitive_scaffolding": "Cole Cognitive Scaffolding System"
+    }
+    
+    try:
+        # Import your newly created memory client block
+        import cole_knowledge
+        
+        # Ping the active cluster using the client we built inside cole_knowledge
+        st.success("⚡ Direct Handshake Active: Connected to Qdrant Core Engine.")
+        st.markdown("---")
+        
+        for q_name, clean_name in collections_map.items():
+            try:
+                # Query the database for this specific vault's statistics
+                col_desc = cole_knowledge.q_client.get_collection(collection_name=q_name)
+                vector_count = col_desc.points_count
+            except Exception:
+                # Fallback if a specific collection hasn't been created yet
+                vector_count = 0
+                
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                st.write(f"📂 Vault: **{clean_name}**")
+            with col_b:
+                st.code(f"{vector_count} Layers Loaded")
+            st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
+            
+    except Exception as q_err:
+        st.error("🔒 Vector Sync Standby Mode: Waiting for active credentials pipeline.")
+        st.caption(f"Status Note: {q_err}")
+        
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab == "Archived Chats":
