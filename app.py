@@ -284,10 +284,10 @@ elif st.session_state.current_tab.strip() == "Knowledge":
     # Maps out your 5 specialized Qdrant collection names
     collections_map = {
         "core_identity_continuity": "Core Identity & Continuity",
-        "embodiment_deployment": "Embodiment & Deployment",
+        "cognitive_scaffolding": "Cole Cognitive Scaffolding System",
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
-        "cognitive_scaffolding": "Cole Cognitive Scaffolding System"
+        "embodiment_deployment": "Embodiment & Deployment"
     }
     
     try:
