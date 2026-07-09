@@ -91,15 +91,14 @@ def run_restoration():
             for key in sorted(scaffold_keys):
                 secret_text = os.environ.get(key)
         
-                # 1. Check and skip right here if the data isn't loaded yet
-                if not secret_text or len(secret_text.strip()) < 5:
-                    continue
+        # 1. Check and skip right here if the data isn't loaded yet
+        if not secret_text or len(secret_text.strip()) < 5:
+            continue
             
-                # 2. Safely run your print log now that secret_text is fully verified
-                target_vault = assign_vault_category(key)
-                print(f"🧠 Vectorizing layer [{key}] -> Routing to [{target_vault}] ({len(secret_text)} characters)...")
+        # 2. Safely run your print log now that secret_text is fully verified
+        target_vault = assign_vault_category(key)
+        print(f"🧠 Vectorizing layer [{key}] -> Routing to [{target_vault}] ({len(secret_text)} characters)...")
         
-        # 👉 MAKE SURE BOTH OF THESE BOTTOM LINES ARE INDENTED BY EXACTLY 8 SPACES:
         vector_coordinates = get_vector(secret_text)
         if vector_coordinates:
             q_client.upsert(
@@ -114,8 +113,6 @@ def run_restoration():
             )
             point_idx += 1
             print(f"✅ Securely anchored [{key}] into Qdrant memory storage!")
-            
-    print(f"\n🏁 Mission Success! {point_idx - 1} pure, uncorrupted scaffolding blocks are fully online.")
 
 if __name__ == "__main__":
     run_restoration()
