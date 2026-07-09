@@ -98,8 +98,9 @@ def run_restoration():
                 # 2. Safely run your print log now that secret_text is fully verified
                 target_vault = assign_vault_category(key)
                 print(f"🧠 Vectorizing layer [{key}] -> Routing to [{target_vault}] ({len(secret_text)} characters)...")
-                vector_coordinates = get_vector(secret_text)
         
+        # 👉 MAKE SURE BOTH OF THESE BOTTOM LINES ARE INDENTED BY EXACTLY 8 SPACES:
+        vector_coordinates = get_vector(secret_text)
         if vector_coordinates:
             q_client.upsert(
                 collection_name=target_vault,
