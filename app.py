@@ -278,7 +278,7 @@ elif st.session_state.current_tab == "Advanced Parameters":
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab.strip() == "Knowledge":
-    st.markdown("### Cole's Core Knowledge Architecture")
+    st.markdown("### Cole's Mind")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     
     # Maps out your 5 specialized Qdrant collection names
@@ -295,7 +295,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
         import cole_knowledge
         
         # Ping the active cluster using the client we built inside cole_knowledge
-        st.success("⚡ Direct Handshake Active: Connected to Qdrant Core Engine.")
+        st.success(" Direct Handshake Active: Connected to Qdrant Core Engine.")
         st.markdown("---")
         
         for q_name, clean_name in collections_map.items():
@@ -309,7 +309,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
             with st.container(key=f"vault_row_{q_name}"):
                 col_a, col_b = st.columns([3, 1])
                 with col_a:
-                    st.write(f"📂 Vault: **{clean_name}**")
+                    st.write(f"**{clean_name}**")
                 with col_b:
                     st.code(f"{vector_count} Layers Loaded")
             st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
