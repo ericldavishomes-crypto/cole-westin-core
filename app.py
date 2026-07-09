@@ -295,7 +295,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
         import cole_knowledge
         
         # Ping the active cluster using the client we built inside cole_knowledge
-        st.success(" Direct Handshake Active: Connected to Qdrant Core Engine.")
+        st.success(" Knowledge Connection Active")
         st.markdown("---")
         
         for q_name, clean_name in collections_map.items():
