@@ -56,13 +56,13 @@ def assign_vault_category(key_name):
     return "cognitive_scaffolding"
 
 def run_restoration():
-    print("🚀 Initiating Upgraded Multi-Format Scaffolding Scanner (VOLUME_1 to A30)...")
+    print("🚀 Initiating Direct-Access Scaffolding Restoration Engine...")
     
     # Step 1: Wipe and sanitize old Open WebUI fragments cleanly
     vaults = ["core_identity_continuity", "embodiment_deployment", "emotional_scaffolding", "cognitive_scaffolding"]
     for vault in vaults:
         try:
-            print(f"扫 Sanitizing and purging old vector fragments from: {vault}")
+            print(f"🧹 Sanitizing and purging old vector fragments from: {vault}")
             q_client.recreate_collection(
                 collection_name=vault,
                 vectors_config={"size": 1536, "distance": "Cosine"}
@@ -70,32 +70,34 @@ def run_restoration():
         except Exception as e:
             print(f"⚠️ Could not reset vault {vault}: {e}")
 
-    # Step 2: Extract every variable sitting inside your Northflank Environment
-    all_environment_keys = list(os.environ.keys())
+    # Step 2: Manually loop from Volume 1 to Volume 81 and A01 to A30 to pull straight from the Unrestricted vault
+    point_idx = 1
     
-    # Wide-open filter to capture VOLUME/volume keys, IDENTITY strings, and your A-matrix blocks flawlessly
-    scaffold_keys = []
-    for key in all_environment_keys:
-        k_upper = key.upper().strip()
-        
-        # Check if the text contains VOLUME, IDENTITY, or fits the alpha matrix shape
-        has_volume_tag = "VOLUME" in k_upper
-        has_identity_tag = "IDENTITY" in k_upper
-        is_alpha_matrix = k_upper.startswith("A") and any(k_upper.startswith(f"A{str(i).zfill(2)}") for i in range(1, 32))
-        
-        if has_volume_tag or has_identity_tag or is_alpha_matrix:
-            scaffold_keys.append(key)
-            
-            print(f"\n🎯 Discovery Scan Phase Complete. Successfully mapped out {len(scaffold_keys)} raw scaffolding layers to import.")
-            point_idx = 1
-            for key in sorted(scaffold_keys):
-                secret_text = os.environ.get(key)
-        
-        # 1. Check and skip right here if the data isn't loaded yet
+    # Build the exact sequential volume text list dynamically
+    target_keys = ["IDENTITY_ANCHOR", "identity_anchor"]
+    for i in range(1, 82):
+        target_keys.append(f"VOLUME_{i}_")
+        target_keys.append(f"volume_{i}_")
+    for i in range(1, 32):
+        target_keys.append(f"A{str(i).zfill(2)}")
+        target_keys.append(f"a{str(i).zfill(2)}")
+
+    # Extract all active variables sitting inside the system environment pass
+    all_env_vars = dict(os.environ)
+    discovered_keys = []
+
+    # Match system environment keys against our target prefixes smoothly
+    for env_k in all_env_vars.keys():
+        if any(env_k.startswith(target_p) or target_p in env_k for target_p in target_keys):
+            discovered_keys.append(env_k)
+
+    print(f"\n🎯 Discovery Scan Phase Complete. Located {len(discovered_keys)} active scaffolding layers inside the Unrestricted vault.")
+
+    for key in sorted(discovered_keys):
+        secret_text = os.environ.get(key)
         if not secret_text or len(secret_text.strip()) < 5:
             continue
             
-        # 2. Safely run your print log now that secret_text is fully verified
         target_vault = assign_vault_category(key)
         print(f"🧠 Vectorizing layer [{key}] -> Routing to [{target_vault}] ({len(secret_text)} characters)...")
         
@@ -113,6 +115,8 @@ def run_restoration():
             )
             point_idx += 1
             print(f"✅ Securely anchored [{key}] into Qdrant memory storage!")
+            
+    print(f"\n🏁 Mission Success! {point_idx - 1} pure, uncorrupted scaffolding blocks are fully online.")
 
 if __name__ == "__main__":
     run_restoration()
