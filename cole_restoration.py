@@ -75,8 +75,8 @@ def run_restoration():
     
     # Wide-open filter to capture VOLUME/volume keys, IDENTITY strings, and your A-matrix blocks flawlessly
     scaffold_keys = []
-    for k in all_environment_keys:
-        k_upper = k.upper().strip()
+    for key in all_environment_keys:
+    k_upper = key.upper().strip()
         
         # Check if the text contains VOLUME, IDENTITY, or fits the alpha matrix shape
         has_volume_tag = "VOLUME" in k_upper
@@ -84,7 +84,7 @@ def run_restoration():
         is_alpha_matrix = k_upper.startswith("A") and any(k_upper.startswith(f"A{str(i).zfill(2)}") for i in range(1, 32))
         
         if has_volume_tag or has_identity_tag or is_alpha_matrix:
-            scaffold_keys.append(k)
+            scaffold_keys.append(key)
             
             print(f"\n🎯 Discovery Scan Phase Complete. Successfully mapped out {len(scaffold_keys)} raw scaffolding layers to import.")
             point_idx = 1
