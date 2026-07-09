@@ -76,7 +76,7 @@ def run_restoration():
     # Wide-open filter to capture VOLUME/volume keys, IDENTITY strings, and your A-matrix blocks flawlessly
     scaffold_keys = []
     for key in all_environment_keys:
-    k_upper = key.upper().strip()
+        k_upper = key.upper().strip()
         
         # Check if the text contains VOLUME, IDENTITY, or fits the alpha matrix shape
         has_volume_tag = "VOLUME" in k_upper
