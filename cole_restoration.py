@@ -11,15 +11,15 @@ OPENROUTER_API_KEY = "sk-or-v1-b6671c076e701265b2e881c70081822c676512d49df0426f1
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
 
-# 👉 ROUTING THROUGH THE OPEN COHERE MATRIX ENGINE (1024-DIMENSION HIGH PERFORMANCE)
-def get_vector(text, model="cohere/embed-english-v3"):
+# 👉 SWITCHING BACK TO THE UNIVERSAL ENDPOINT TACTICAL TANK
+def get_vector(text, model="openai/text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
         if isinstance(response, dict):
             return response["data"]["embedding"]
         return response.data.embedding
     except Exception as e:
-        print(f"❌ OpenRouter embedding failed: {e}")
+        print(f"❌ OpenAI/OpenRouter embedding failed: {e}")
         return None
 
 def assign_vault_category(key_name):
@@ -41,7 +41,7 @@ def run_local_restoration():
         print("🧹 Cleaning and resizing the active core identity vector runway...")
         q_client.recreate_collection(
             collection_name="core_identity_continuity",
-            vectors_config={"size": 1024, "distance": "Cosine"}
+            vectors_config={"size": 1536, "distance": "Cosine"}
         )
     except Exception as e:
         print(f"⚠️ Collection reset paused: {e}")
