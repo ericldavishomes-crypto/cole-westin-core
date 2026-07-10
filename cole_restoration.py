@@ -6,10 +6,10 @@ from qdrant_client.models import PointStruct
 # 1. Network & Database connection strings
 QDRANT_URL = "http://cole-memory-index:6333"
 QDRANT_API_KEY = "qdrant"
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-embedding_client = OpenAI(base_url="https://openrouter.ai", api_key=OPENROUTER_API_KEY)
+embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
 
 # 👉 ROUTING THROUGH THE OPEN COHERE MATRIX ENGINE (1024-DIMENSION HIGH PERFORMANCE)
 def get_vector(text, model="cohere/embed-english-v3.0"):
