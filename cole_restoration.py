@@ -9,22 +9,22 @@ QDRANT_API_KEY = "qdrant"
 OPENROUTER_API_KEY = "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"
 
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-embedding_client = OpenAI(base_url="https://openrouter.ai", api_key=OPENROUTER_API_KEY)
+embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
 
 def get_vector(text, model="text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
-        
-        # Diagnostics: Prints out the exact string response if OpenRouter sends a text error
-        if isinstance(response, str):
-            print(f"📡 OpenRouter Diagnostic Alert: Response is a string -> '{response}'")
-            return None
-            
         if isinstance(response, dict):
-            return response["data"][0]["embedding"]
-        return response.data[0].embedding
+            return response["data"]["embedding"]
+        return response.data.embedding
     except Exception as e:
-        print(f"❌ OpenAI/OpenRouter embedding failed: {e}")
+        # Diagnostic: Captures and displays the raw server error text inside the terminal
+        print(f"❌ OpenAI/OpenRouter embedding failed. Raw Error Message: {e}")
+        try:
+            if hasattr(e, 'response') and e.response:
+                print(f"📡 Server Response Detail: {e.response.text}")
+        except:
+            pass
         return None
 
 def assign_vault_category(key_name):
