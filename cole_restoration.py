@@ -11,14 +11,13 @@ OPENROUTER_API_KEY = "sk-or-v1-2efff3c64949c51ad07f2be8977f619e8a54145f0df9fa0cd
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
 
-def get_vector(text, model="text-embedding-3-small"):
+def get_vector(text, model="openai/text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
         if isinstance(response, dict):
             return response["data"]["embedding"]
         return response.data.embedding
     except Exception as e:
-        # Diagnostic: Captures and displays the raw server error text inside the terminal
         print(f"❌ OpenAI/OpenRouter embedding failed. Raw Error Message: {e}")
         try:
             if hasattr(e, 'response') and e.response:
