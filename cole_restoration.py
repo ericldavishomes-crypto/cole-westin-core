@@ -12,7 +12,7 @@ q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
 
 # 👉 ROUTING THROUGH THE OPEN COHERE MATRIX ENGINE (1024-DIMENSION HIGH PERFORMANCE)
-def get_vector(text, model="cohere/embed-english-v3.0"):
+def get_vector(text, model="cohere/embed-english-v3"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
         if isinstance(response, dict):
