@@ -15,9 +15,20 @@ embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENR
 def get_vector(text, model="openai/text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
+        
+        # 1. Handle standard dictionary return structures safely
         if isinstance(response, dict):
-            return response["data"]["embedding"]
-        return response.data.embedding
+            return response["data"][0]["embedding"]
+            
+        # 2. Correct index traversal for standard API response object wrappers
+        if hasattr(response, "data") and len(response.data) > 0:
+            # If it's an object containing an index list, access item 0 first
+            if hasattr(response.data[0], "embedding"):
+                return response.data[0].embedding
+            # Fallback if the inner elements act like a nested dict list
+            return response.data[0]["embedding"]
+            
+        return None
     except Exception as e:
         print(f"❌ OpenAI/OpenRouter embedding failed: {e}")
         return None
@@ -36,7 +47,7 @@ def run_local_restoration():
         print(f"❌ Error: Cannot find '{file_path}' in the workspace folder.")
         return
 
-    # Prepare your core collection with the matching 1024 vector size for Cohere v3
+    # Prepare your core collection with the matching 1536 vector size for OpenAI v3 Small
     try:
         print("🧹 Cleaning and resizing the active core identity vector runway...")
         q_client.recreate_collection(
