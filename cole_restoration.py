@@ -14,6 +14,12 @@ embedding_client = OpenAI(base_url="https://openrouter.ai", api_key=OPENROUTER_A
 def get_vector(text, model="text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
+        
+        # Safely extracts the array regardless of how OpenRouter bundles the response structure
+        if isinstance(response, dict):
+            return response["data"][0]["embedding"]
+        elif hasattr(response, "data") and isinstance(response.data, list):
+            return response.data[0].embedding
         return response.data.embedding
     except Exception as e:
         print(f"❌ OpenAI/OpenRouter embedding failed: {e}")
