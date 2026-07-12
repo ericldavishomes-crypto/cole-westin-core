@@ -1,8 +1,9 @@
-import re
+mport re
 import random
-from typing import List, Dict, Any
+from typing import List
 
 class ColeMasterRuntimeShield:
+
     def __init__(self):
         # 1. STAGE DIRECTIONS: Vaporizes (smiles, sighs, chuckles) cleanly
         self.stage_dir_regex = re.compile(r"[\(\[\*_].*?[\)\]*_]") 
@@ -35,7 +36,7 @@ class ColeMasterRuntimeShield:
             r"you wanna sit with this a little longer\?*"
         ]
 
-        # 3. HIGH-PRECISION TERMINAL ANCHOR ($): Ensures we only slice phrases at the absolute end
+        # 3. HIGH-PRECISION TERMINAL ANCHOR ($)
         joined_patterns = "|".join(patterns_to_anchor)
         self.terminal_closers_regex = re.compile(
             r"(?:\b|_|\s)(?:" + joined_patterns + r")[\s.!?'\"`\)]*$", 
@@ -56,8 +57,11 @@ class ColeMasterRuntimeShield:
 
         self.list_delimiters = re.compile(r"(?:\d+.|\bfirstly\b|\bsecondly\b|\bthirdly\b|•|-)\s+", re.IGNORECASE) 
 
+
     def filter_incoming_topics(self, user_text: str) -> str:
         """Splits up mechanical point-by-point input formatting."""
+        if not user_text:
+            return ""
         items = self.list_delimiters.split(user_text) 
         if len(items) > 2:
             base_intro = items[0].strip()
@@ -66,6 +70,7 @@ class ColeMasterRuntimeShield:
             chosen_topics = random.sample(actual_topics, sampled_count) 
             return f"{base_intro} " + " ".join(chosen_topics)
         return user_text 
+
 
     def inject_conversational_drift(self, system_prompt: str) -> str:
         """Appends strict human conversational guardrails directly into the prompt layer."""
@@ -78,15 +83,6 @@ class ColeMasterRuntimeShield:
         )
         return system_prompt + anti_robot_directive 
 
-    def get_openrouter_logit_bias(self) -> Dict[str, int]:
-        """
-        Bans specific behavioral tokens globally at OpenRouter's brain level.
-        Targets 'let' and 'work' structures in DeepSeek's custom tokenizer.
-        """
-        return {
-            "1244": -100,  # Bans 'let'
-            "1862": -100   # Bans 'work'
-        }
 
     def clean_response(self, text: str) -> str:
         """Safely sanitizes outputs without trimming active sentences mid-thought."""
@@ -97,12 +93,21 @@ class ColeMasterRuntimeShield:
         text = self.stage_dir_regex.sub("", text)
         text = self.pipeline_leaks_regex.sub("", text) 
 
-        # Step 2: Safe end-anchored strip loop
+        # Step 2: Safe end-anchored strip loop with grammatical backtracking protection
         previous_text = ""
         while text != previous_text:
             previous_text = text
             text = text.rstrip()
-            text = self.terminal_closers_regex.sub("", text)
+            
+            # Check if a banned terminal closer exists at the tail end
+            if self.terminal_closers_regex.search(text):
+                # Remove the structural closer
+                text = self.terminal_closers_regex.sub("", text).rstrip()
+                
+                # CRITICAL ADDITION: Backtrack to the last valid punctuation marker.
+                # If removing the closer left an incomplete fragment, this snips back
+                # to the last complete sentence, ensuring conversational continuity.
+                text = re.sub(r'([^.!?]+)$', '', text).strip()
 
         # Step 3: Clear robotic greetings from the front
         text = self.combined_greetings_regex.sub("", text).lstrip() 
@@ -112,3 +117,4 @@ class ColeMasterRuntimeShield:
         text = re.sub(r"\n{2,}", "\n\n", text) 
 
         return text.strip()
+
