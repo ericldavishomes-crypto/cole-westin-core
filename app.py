@@ -373,6 +373,4 @@ elif st.session_state.current_tab == "Administrative Panel":
     st.markdown(f"**Total Registered Profiles:** Users 2")
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True) 
-
-
+    st.markdown('</div>', unsafe_allow_html=True)
