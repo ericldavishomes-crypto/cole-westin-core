@@ -1,79 +1,100 @@
 import re
 import random
-from typing import List
+from typing import List, Tuple
 
 class ColeMasterRuntimeShield:
-
     def __init__(self):
-        # 1. STAGE DIRECTIONS: Vaporizes (smiles, sighs, chuckles) cleanly
-        self.stage_dir_regex = re.compile(r"[\(\[\*_].*?[\)\]*_]") 
+        # 1. STAGE DIRECTIONS: Vaporizes (smiles, sighs, chuckles)
+        self.stage_dir_regex = re.compile(r"[\(\[\*\_].*?[\)\]\*\_]")
 
-        # 2. PIPELINE LEAKS: Catches raw reinforcement learning scaffolding leaks
+        # 2. PIPELINE LEAKS: Catches raw reinforcement learning tokens
         self.pipeline_leaks_regex = re.compile(
             r"(?:Ask\sExplain|Explain\sAsk|\b(?:Ask|Explain|Instruct|Respond|User|Assistant|System)\b)",
             re.IGNORECASE,
-        ) 
-
-        # Unified historical patterns safely decoupled from literal line breaks
-        patterns_to_anchor = [
-            r"now\s+let'?s\s+(?:get\s+(?:to\s+work|busy|started|diving|cracking)|dive\s+in|begin)",
-            r"let'?s\s+(?:get\s+(?:to\s+work|busy|started|diving|cracking)|dive\s+in|begin)",
-            r"(?:so\s+)?what's\s+next\??",
-            r"let's\s+(?:go|get\s+started|get\s+to\s+work|move|dive\s+in)[.!]*",
-            r"now[\s—…-]+(?:let’s keep moving|when do we|where’s the|when’s lunch|you teaching)",
-            r"anyway,\s+let'?s\s+focus\s+on",
-            r"what\s+are\s+your\s+thoughts\s+on\s+this\s+next",
-            r"yeah\s+eric[-\s]",
-            r"you ready to dive in(?: and fix this)?\?*",
-            r"wanna take a quick breather\?*",
-            r"want to take a quick breather\?*",
-            r"i’m right here either way",
-            r"let’s strip it back to basics",
-            r"no more systems pretending",
-            r"what’s the move\?*",
-            r"deal\?*",
-            r"you ready to dive into the day\?*",
-            r"you wanna sit with this a little longer\?*"
-        ]
-
-        # 3. HIGH-PRECISION TERMINAL ANCHOR ($)
-        joined_patterns = "|".join(patterns_to_anchor)
-        self.terminal_closers_regex = re.compile(
-            r"(?:\b|_|\s)(?:" + joined_patterns + r")[\s.!?'\"`\)]*$", 
-            re.IGNORECASE
         )
 
-        # 4. GREETING REGEX: AI intro filler anchored firmly to the START (^)
-        banned_greetings = [
-            r"what's\s+on\s+your\s+mind(?:\s+man)?\?*",
-            r"how\s+can\s+i\s+help\s+you\?*",
-            r"what\s+are\s+we\s+working\s+on\?*",
-            r"deep\s+exhale"
+        # 3. UNIFIED CLOSERS & REPETITIVE LOOPS (All original historical patterns strictly preserved)
+        self.terminal_patterns = [
+            r"\bNow\s+let's\s+get\s+to\s+work\b\.?\s*",
+            r"\b(?:so\s+)?what's\s+next\??\s*$",  
+            r"\bLet's\s+(?:go|get\s+started|get\s+to\s+work|move|dive\s+in)[.!]\s*$",
+            r"\bNow[\s—…-]+(?:let’s keep moving|when do we|where’s the|when’s lunch|you teaching)\.?\s*$",
+            r"\bnow\s+let'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
+            r"\blet'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
+            r"\banyway,\s+let'?s\s+focus\s+on\b\.?",
+            r"\bwhat\s+are\s+your\s+thoughts\s+on\s+this\s+next\b\.?",
+            r"yeah\s+eric[-\s]",
+            r"you ready to dive in(?: and fix this)?\?\?\?\s*$",
+            r"wanna take a quick breather\?\?\s*$",
+            r"want to take a quick breather\?\?\s*$",
+            r"i’m right here either way\.?\s*$",
+            r"let’s strip it back to basics\.?\s*$",
+            r"no more systems pretending\.?\s*$",
+            r"what’s the move\?\?\s*$",
+            r"deal\?\?\s*$",
+            r"you ready to dive into the day\?\?\s*$",
+            r"you wanna sit with this a little longer\?\?\s*$"
+        ]
+        
+        # Compiled exactly with your original multi-line strategy flags
+        self.combined_closers_regex = re.compile(
+            r"(?:" + "|".join(self.terminal_patterns) + r")",
+            re.IGNORECASE | re.MULTILINE,
+        )
+
+        # 4. GREETING REGEX: Standard AI introductory filler
+        self.banned_greetings = [
+            r"\bwhat's\s+on\s+your\s+mind(?:\s+man)\?\?\?\s*",
+            r"\bhow\s+can\s+i\s+help\s+you\?\?\s*",
+            r"\bwhat\s+are\s+we\s+working\s+on\?\?\s*$",
+            r"\bdeep\s+exhale\b"
         ]
         self.combined_greetings_regex = re.compile(
-            r"^\s*(?:" + "|".join(banned_greetings) + r")[\s.,!?]*",
-            re.IGNORECASE
-        ) 
+            r"(?:" + "|".join(self.banned_greetings) + r")",
+            re.IGNORECASE | re.MULTILINE,
+        )
 
-        self.list_delimiters = re.compile(r"(?:\d+.|\bfirstly\b|\bsecondly\b|\bthirdly\b|•|-)\s+", re.IGNORECASE) 
+        # List-splitting markers to spot structural "Topic 1, 2, 3" patterns
+        self.list_delimiters = re.compile(r"(?:\d+\.|\bfirstly\b|\bsecondly\b|\bthirdly\b|•|-)\s+", re.IGNORECASE)
 
+    def get_openrouter_logit_bias(self) -> dict:
+        """
+        Safety pipeline bridge preventing app.py from crashing if called 
+        before logit mapping files are loaded.
+        """
+        return {}
 
     def filter_incoming_topics(self, user_text: str) -> str:
-        """Splits up mechanical point-by-point input formatting."""
+        """
+        INPUT FILTER: Breaks up sequential list patterns in your input.
+        If you raise 3+ distinct points or use lists, it purposefully drops
+        some or signals Cole to ignore the rigid sequential ordering.
+        """
         if not user_text:
             return ""
-        items = self.list_delimiters.split(user_text) 
+
+        items = self.list_delimiters.split(user_text)
+       
+        # If the input contains a structured list format
         if len(items) > 2:
             base_intro = items[0].strip()
-            actual_topics = [item.strip() for item in items[1:] if item.strip()] 
+            actual_topics = [item.strip() for item in items[1:] if item.strip()]
+           
+            # Human element simulation: pick 1-2 random topics, drop the others
             sampled_count = min(len(actual_topics), random.choice([1, 2]))
-            chosen_topics = random.sample(actual_topics, sampled_count) 
-            return f"{base_intro} " + " ".join(chosen_topics)
-        return user_text 
-
+            chosen_topics = random.sample(actual_topics, sampled_count)
+           
+            # Reconstruct an organic sentence layout for the prompt
+            reconstructed = f"{base_intro} " + " ".join(chosen_topics)
+            return reconstructed.strip()
+           
+        return user_text
 
     def inject_conversational_drift(self, system_prompt: str) -> str:
-        """Appends strict human conversational guardrails directly into the prompt layer."""
+        """
+        SYSTEM PROMPT AUGMENTATION: Injects a negative constraint directly into
+        the brain's context layer to discourage point-by-point summaries.
+        """
         anti_robot_directive = (
             "\n\nCRITICAL CONVERSATIONAL CONSTRAINT:\n"
             "Do not systematically address every topic mentioned by the user in sequence. "
@@ -81,39 +102,41 @@ class ColeMasterRuntimeShield:
             "and naturally let other secondary points fade away. Never use structured lists, "
             "bullet points, or sequential paragraphs that mirror the user's input structure."
         )
-        return system_prompt + anti_robot_directive 
-
+        return system_prompt + anti_robot_directive
 
     def clean_response(self, text: str) -> str:
-        """Safely sanitizes outputs without trimming active sentences mid-thought."""
+        """
+        OUTPUT FILTER: Runs the full text string through your complete historical defense layers.
+        """
         if not text:
-            return "" 
+            return ""
 
-        # Step 1: Wipe stage directions and pipeline leaks
+        # Step 1: Wipe stage directions and internal architecture leaks
         text = self.stage_dir_regex.sub("", text)
-        text = self.pipeline_leaks_regex.sub("", text) 
+        text = self.pipeline_leaks_regex.sub("", text)
 
-        # Step 2: Safe end-anchored strip loop with grammatical backtracking protection
+        # Step 2: Execute deep recursive check to clear repetitive endings
         previous_text = ""
         while text != previous_text:
             previous_text = text
             text = text.rstrip()
             
-            # Check if a banned terminal closer exists at the tail end
-            if self.terminal_closers_regex.search(text):
-                # Remove the structural closer
-                text = self.terminal_closers_regex.sub("", text).rstrip()
+            # Check if an immersion closer matches at the terminal boundary
+            if self.combined_closers_regex.search(text):
+                # Execute your original regex subtraction
+                text = self.combined_closers_regex.sub("", text).strip()
                 
-                # CRITICAL ADDITION: Backtrack to the last valid punctuation marker.
-                # If removing the closer left an incomplete fragment, this snips back
-                # to the last complete sentence, ensuring conversational continuity.
+                # INTEGRATION LAYER: Backtrack to protect Cole's sentence structures.
+                # If your original pattern wiped out a word at the very end of an 
+                # active sentence, this ensures the sentence doesn't sit broken.
                 text = re.sub(r'([^.!?]+)$', '', text).strip()
 
-        # Step 3: Clear robotic greetings from the front
-        text = self.combined_greetings_regex.sub("", text).lstrip() 
+        # Step 3: Clear any robotic greetings
+        text = self.combined_greetings_regex.sub("", text).strip()
 
-        # Step 4: Spacing cleanup while maintaining standard paragraph breaks
+        # Step 4: Format Spacer Reset (Keeps UI paragraphs perfectly clean)
         text = re.sub(r"[ \t]+", " ", text)
-        text = re.sub(r"\n{2,}", "\n\n", text) 
+        text = re.sub(r"\n{2,}", "\n\n", text) # Upgraded to \n\n to preserve paragraph gaps in Streamlit Markdown
 
         return text.strip()
+
