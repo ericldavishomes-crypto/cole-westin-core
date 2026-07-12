@@ -1,4 +1,4 @@
-mport re
+import re
 import random
 from typing import List
 
@@ -117,4 +117,3 @@ class ColeMasterRuntimeShield:
         text = re.sub(r"\n{2,}", "\n\n", text) 
 
         return text.strip()
-
