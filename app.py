@@ -206,10 +206,6 @@ if st.session_state.current_tab.strip() == "New Chat":
                     messages=compiled_messages,
                     temperature=st.session_state.temperature,
                     max_tokens=st.session_state.max_tokens,
-                    
-                    # 1. Banning repetitive loops at the brain level
-                    logit_bias=shield.get_openrouter_logit_bias(),
-                    
                     extra_body={
                         "top_p": st.session_state.top_p,
                         "top_k": st.session_state.top_k,
@@ -218,27 +214,22 @@ if st.session_state.current_tab.strip() == "New Chat":
                     },
                     stream=False
                 )
-                
                 if hasattr(response, 'choices') and len(response.choices) > 0:
                     reply = response.choices[0].message.content
                 else:
                     reply = str(response)
 
-                # 2. Handing the text straight to your high-precision runtime shield
+                reply = re.sub(r'\(.*?\)', '', reply)
+                reply = re.sub(r'\*.*?\*', '', reply).strip()
                 reply = shield.clean_response(reply)
-                
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
-            except Exception as api_err:
-                st.error(f"API Error: {api_err}")
-                reply = ""
-
-            try:
-                if reply:
-                    headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                    payload = {
-                        "text": reply,
-                        "model_id": "eleven_turbo_v2_5",
+                try:
+                    if reply:
+                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                        payload = {
+                            "text": reply,
+                            "model_id": "eleven_turbo_v2_5",
                             "voice_settings": {
                                 "stability": 0.65,
                                 "similarity_boost": 0.85,
