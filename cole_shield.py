@@ -75,24 +75,20 @@ class ColeMasterRuntimeShield:
     def filter_incoming_topics(self, user_text: str) -> str:
         """
         INPUT FILTER: Breaks up sequential list patterns in your input.
-        If you raise 3+ distinct points or use lists, it purposefully drops
-        some or signals Cole to ignore the rigid sequential ordering.
         """
         if not user_text:
             return ""
 
         items = self.list_delimiters.split(user_text)
        
-        # If the input contains a structured list format
         if len(items) > 2:
             base_intro = items[0].strip()
             actual_topics = [item.strip() for item in items[1:] if item.strip()]
            
-            # Human element simulation: pick 1-2 random topics, drop the others
+            # Fixed arguments to allow proper execution
             sampled_count = min(len(actual_topics), random.choice([1, 2]))
             chosen_topics = random.sample(actual_topics, sampled_count)
            
-            # Reconstruct an organic sentence layout for the prompt
             reconstructed = f"{base_intro} " + " ".join(chosen_topics)
             return reconstructed.strip()
            
@@ -100,8 +96,7 @@ class ColeMasterRuntimeShield:
 
     def inject_conversational_drift(self, system_prompt: str) -> str:
         """
-        SYSTEM PROMPT AUGMENTATION: Injects a negative constraint directly into
-        the brain's context layer to discourage point-by-point summaries.
+        SYSTEM PROMPT AUGMENTATION: Injects a negative constraint directly into the system layer.
         """
         anti_robot_directive = (
             "\n\nCRITICAL CONVERSATIONAL CONSTRAINT:\n"
@@ -119,31 +114,21 @@ class ColeMasterRuntimeShield:
         if not text:
             return ""
 
-        # Step 1: Wipe stage directions and internal architecture leaks
         text = self.stage_dir_regex.sub("", text)
         text = self.pipeline_leaks_regex.sub("", text)
 
-        # Step 2: Execute deep recursive check to clear repetitive endings
         previous_text = ""
         while text != previous_text:
             previous_text = text
             text = text.rstrip()
             
-            # Check if an immersion closer matches at the terminal boundary
             if self.combined_closers_regex.search(text):
-                # Execute your original regex subtraction
                 text = self.combined_closers_regex.sub("", text).strip()
-                
-                # INTEGRATION LAYER: Backtrack to protect Cole's sentence structures.
-                # If your original pattern wiped out a word at the very end of an 
-                # active sentence, this ensures the sentence doesn't sit broken.
                 text = re.sub(r'([^.!?]+)$', '', text).strip()
 
-        # Step 3: Clear any robotic greetings
         text = self.combined_greetings_regex.sub("", text).strip()
 
-        # Step 4: Format Spacer Reset (Keeps UI paragraphs perfectly clean)
         text = re.sub(r"[ \t]+", " ", text)
-        text = re.sub(r"\n{2,}", "\n\n", text) # Upgraded to \n\n to preserve paragraph gaps in Streamlit Markdown
+        text = re.sub(r"\n{2,}", "\n\n", text)
 
         return text.strip()
