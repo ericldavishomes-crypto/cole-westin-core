@@ -106,4 +106,4 @@ def run_local_restoration():
     print(f"\n🏁 Local restoration complete! Successfully loaded {point_idx - 1} foundational matrix blocks.")
 
 if __name__ == "__main__":
-    run_local_restoration()
+    run_bulk_directory_ingestion()
