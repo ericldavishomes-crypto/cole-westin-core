@@ -3,92 +3,69 @@ from qdrant_client import QdrantClient
 from openai import OpenAI
 from qdrant_client.models import PointStruct
 
-# 1. Network & Database connection strings
+# 1. Connection Strings & Core API Credentials
 QDRANT_URL = "http://cole-memory-index:6333"
 QDRANT_API_KEY = "qdrant"
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
+embedding_client = OpenAI(base_url="https://openrouter.ai", api_key=OPENROUTER_API_KEY)
 
-# 👉 SWITCHING BACK TO THE UNIVERSAL ENDPOINT TACTICAL TANK
 def get_vector(text, model="openai/text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
-        
-        # 1. Handle standard dictionary return structures safely
         if isinstance(response, dict):
-            return response["data"][0]["embedding"]
-            
-        # 2. Correct index traversal for standard API response object wrappers
-        if hasattr(response, "data") and len(response.data) > 0:
-            # If it's an object containing an index list, access item 0 first
-            if hasattr(response.data[0], "embedding"):
-                return response.data[0].embedding
-            # Fallback if the inner elements act like a nested dict list
-            return response.data[0]["embedding"]
-            
-        return None
+            return response["data"]["embedding"]
+        return response.data.embedding
     except Exception as e:
-        print(f"❌ OpenAI/OpenRouter embedding failed: {e}")
+        print(f"❌ OpenAI/OpenRouter embedding failed for block: {e}")
         return None
 
-def assign_vault_category(key_name):
-    key_upper = key_name.upper().strip()
-    if "IDENTITY_ANCHOR" in key_upper or "VOLUME_1" in key_upper or "VOLUME_2" in key_upper:
+def assign_vault_category(file_name):
+    # System routing engine based on file name strings
+    name_upper = file_name.upper()
+    if "IDENTITY" in name_upper or "VOLUME" in name_upper or "CONTINUITY" in name_upper:
         return "core_identity_continuity"
-    return "cognitive_scaffolding"
+    elif "EMBODIMENT" in name_upper or "SLEEP" in name_upper:
+        return "embodiment_deployment"
+    elif "EMOTION" in name_upper or "FEELING" in name_upper:
+        return "emotional_scaffolding"
+    else:
+        return "cognitive_scaffolding"
 
-def run_local_restoration():
-    print("🚀 Initiating Direct Cohere File Ingestion Engine...")
-    file_path = "test_scaffolding.txt"
+def run_bulk_directory_ingestion():
+    print("🚀 Firing Up the Automated Bulk Directory Scanner...")
+    folder_path = "Cole_Master_Scaffolding"
     
-    if not os.path.exists(file_path):
-        print(f"❌ Error: Cannot find '{file_path}' in the workspace folder.")
+    if not os.path.exists(folder_path):
+        print(f"⚠️ Notice: Folder '{folder_path}' not detected. Scanning current folder paths...")
         return
 
-    # Prepare your core collection with the matching 1536 vector size for OpenAI v3 Small
-    try:
-        print("🧹 Cleaning and resizing the active core identity vector runway...")
-        q_client.recreate_collection(
-            collection_name="core_identity_continuity",
-            vectors_config={"size": 1536, "distance": "Cosine"}
-        )
-    except Exception as e:
-        print(f"⚠️ Collection reset paused: {e}")
+    # Scans the newly uploaded directory housing your text assets
+    all_files = [f for f in os.listdir(folder_path) if f.lower().endswith('.txt') or 'CONTINUITY' in f.upper()]
+    
+    if not all_files:
+        print(f"📁 The folder '{folder_path}' appears empty. Verify folder contents and rerun.")
+        return
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        raw_content = f.read()
+    print(f"🎯 Discovery Phase Complete! Located {len(all_files)} target text files inside the staging directory.")
+    point_idx = 300  # Starts indexing cleanly past historical test points to protect storage boundaries
 
-    raw_layers = raw_content.split("---START_LAYER---")
-    point_idx = 1
-
-    for layer in raw_layers:
-        if not layer.strip():
+    for file_name in sorted(all_files):
+        full_path = os.path.join(folder_path, file_name)
+        print(f"\n🧠 Processing file [{file_name}]...")
+        
+        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+            file_content = f.read().strip()
+            
+        if len(file_content) < 5:
+            print(f"⏩ Skipping empty content row inside file: {file_name}")
             continue
             
-        lines = layer.strip().split("\n")
-        key_name = "UNKNOWN_KEY"
-        text_lines = []
-        is_text_mode = False
+        target_vault = assign_vault_category(file_name)
+        print(f"📡 Vectorizing {len(file_content)} characters via OpenRouter network tunnel...")
         
-        for line in lines:
-            if line.upper().startswith("KEY:"):
-                key_name = line.split(":", 1)[1].replace("KEY:", "").strip()
-            elif line.upper().startswith("TEXT:"):
-                is_text_mode = True
-            elif is_text_mode:
-                text_lines.append(line)
-                
-        full_text = "\n".join(text_lines).strip()
-        
-        if len(full_text) < 5:
-            continue
-            
-        target_vault = assign_vault_category(key_name)
-        print(f"🧠 Vectorizing local layer [{key_name}] -> Target: [{target_vault}] ({len(full_text)} chars)...")
-        
-        vector_coordinates = get_vector(full_text)
+        vector_coordinates = get_vector(file_content)
         if vector_coordinates:
             q_client.upsert(
                 collection_name=target_vault,
@@ -96,14 +73,14 @@ def run_local_restoration():
                     PointStruct(
                         id=point_idx,
                         vector=vector_coordinates,
-                        payload={"text": full_text, "source_key": key_name}
+                        payload={"text": file_content, "source_key": file_name}
                     )
                 ]
             )
-            print(f"✅ Securely anchored text payload for [{key_name}] directly into Qdrant storage!")
+            print(f"✅ Securely anchored text payload for [{file_name}] directly into Qdrant [{target_vault}] storage shelf!")
             point_idx += 1
 
-    print(f"\n🏁 Local restoration complete! Successfully loaded {point_idx - 1} foundational matrix blocks.")
+    print(f"\n🏁 Ingestion pass complete! Successfully loaded {point_idx - 300} master scaffolding blocks cleanly.")
 
 if __name__ == "__main__":
     run_bulk_directory_ingestion()
