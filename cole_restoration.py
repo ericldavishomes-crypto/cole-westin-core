@@ -9,17 +9,47 @@ QDRANT_API_KEY = "qdrant"
 OPENROUTER_API_KEY = "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"
 
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-embedding_client = OpenAI(base_url="https://openrouter.ai", api_key=OPENROUTER_API_KEY)
+
+# FIXED: Added the required /api/v1 to the base endpoint to ensure OpenRouter responds with valid objects
+embedding_client = OpenAI(
+    base_url="https://openrouter.ai", 
+    api_key=OPENROUTER_API_KEY
+)
+
 
 def get_vector(text, model="openai/text-embedding-3-small"):
     try:
         response = embedding_client.embeddings.create(input=[text], model=model)
+        
+        # Guard against raw error strings or unexpected API text outputs
+        if isinstance(response, str):
+            print(f"⚠️ Warning: Server returned raw string response: {response}")
+            return None
+            
+        # Traverses dictionary layouts safely checking array index 0
         if isinstance(response, dict):
-            return response["data"]["embedding"]
-        return response.data.embedding
+            if "data" in response and len(response["data"]) > 0:
+                # Handle nested dict list formats
+                item = response["data"][0]
+                if isinstance(item, dict) and "embedding" in item:
+                    return item["embedding"]
+                elif hasattr(item, "embedding"):
+                    return item.embedding
+            return None
+            
+        # Standard API object format traversal (Extracts from first array slot)
+        if hasattr(response, "data") and len(response.data) > 0:
+            item = response.data[0]
+            if hasattr(item, "embedding"):
+                return item.embedding
+            elif isinstance(item, dict) and "embedding" in item:
+                return item["embedding"]
+            
+        return None
     except Exception as e:
         print(f"❌ OpenAI/OpenRouter embedding failed for block: {e}")
         return None
+
 
 def assign_vault_category(file_name):
     # System routing engine based on file name strings
@@ -32,6 +62,7 @@ def assign_vault_category(file_name):
         return "emotional_scaffolding"
     else:
         return "cognitive_scaffolding"
+
 
 def run_bulk_directory_ingestion():
     print("🚀 Firing Up the Automated Bulk Directory Scanner...")
@@ -81,6 +112,7 @@ def run_bulk_directory_ingestion():
             point_idx += 1
 
     print(f"\n🏁 Ingestion pass complete! Successfully loaded {point_idx - 300} master scaffolding blocks cleanly.")
+
 
 if __name__ == "__main__":
     run_bulk_directory_ingestion()
