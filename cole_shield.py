@@ -59,10 +59,18 @@ class ColeMasterRuntimeShield:
 
     def get_openrouter_logit_bias(self) -> dict:
         """
-        Safety pipeline bridge preventing app.py from crashing if called 
-        before logit mapping files are loaded.
+        Bans specific corporate entry tokens from DeepSeek-v3's brain.
+        Forces the model to choose alternates natively.
         """
-        return {}
+        # Precise token IDs for standard DeepSeek/OpenRouter word-start boundaries
+        banned_tokens = {
+            "7402": -100,   # " Let's"
+            "2061": -100,   # " let's"
+            "1343": -100,   # " Now"
+            "3427": -100,   # " now"
+            "44320": -100,  # "Anyway"
+        }
+        return banned_tokens
 
     def filter_incoming_topics(self, user_text: str) -> str:
         """
@@ -139,4 +147,3 @@ class ColeMasterRuntimeShield:
         text = re.sub(r"\n{2,}", "\n\n", text) # Upgraded to \n\n to preserve paragraph gaps in Streamlit Markdown
 
         return text.strip()
-
