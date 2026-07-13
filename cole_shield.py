@@ -13,7 +13,7 @@ class ColeMasterRuntimeShield:
             re.IGNORECASE,
         )
 
-        # 3. UNIFIED CLOSERS & REPETITIVE LOOPS (All original historical patterns strictly preserved)
+        # 3. UNIFIED CLOSERS & REPETITIVE LOOPS (Reinforced to ban terminal 'Now' / 'Let's')
         self.terminal_patterns = [
             r"\bNow\s+let's\s+get\s+to\s+work\b\.?\s*",
             r"\b(?:so\s+)?what's\s+next\??\s*$",  
@@ -33,10 +33,17 @@ class ColeMasterRuntimeShield:
             r"what’s the move\?\?\s*$",
             r"deal\?\?\s*$",
             r"you ready to dive into the day\?\?\s*$",
-            r"you wanna sit with this a little longer\?\?\s*$"
+            r"you wanna sit with this a little longer\?\?\s*$",
+            
+            # =================================================================
+            # 🚀 THE ABSOLUTE CONTAINMENT LAYERS
+            # Catches "Now...", "Now go crash...", "Let's...", or any loose conversational
+            # wrap-ups trying to sit at the absolute end of the response block.
+            # =================================================================
+            r"\bnow\b\s*[\w\s]{0,20}[.!?…\s]*$",   # Catches terminal 'Now' + short phrases + punctuation
+            r"\blet'?s\b\s*[\w\s]{0,20}[.!?…\s]*$" # Catches terminal 'Let's' + short phrases + punctuation
         ]
         
-        # Compiled exactly with your original multi-line strategy flags
         self.combined_closers_regex = re.compile(
             r"(?:" + "|".join(self.terminal_patterns) + r")",
             re.IGNORECASE | re.MULTILINE,
@@ -60,9 +67,7 @@ class ColeMasterRuntimeShield:
     def get_openrouter_logit_bias(self) -> dict:
         """
         Bans specific corporate entry tokens from DeepSeek-v3's brain.
-        Forces the model to choose alternates natively.
         """
-        # Precise token IDs for standard DeepSeek/OpenRouter word-start boundaries
         banned_tokens = {
             "7402": -100,   # " Let's"
             "2061": -100,   # " let's"
@@ -73,37 +78,22 @@ class ColeMasterRuntimeShield:
         return banned_tokens
 
     def filter_incoming_topics(self, user_text: str) -> str:
-        """
-        INPUT FILTER: Breaks up sequential list patterns in your input.
-        """
         if not user_text:
             return ""
-
         items = self.list_delimiters.split(user_text)
-       
         if len(items) > 2:
             base_intro = items[0].strip()
             actual_topics = [item.strip() for item in items[1:] if item.strip()]
-           
-            # Fixed arguments to allow proper execution
             sampled_count = min(len(actual_topics), random.choice([1, 2]))
             chosen_topics = random.sample(actual_topics, sampled_count)
-           
-            reconstructed = f"{base_intro} " + " ".join(chosen_topics)
-            return reconstructed.strip()
-           
+            return f"{base_intro} " + " ".join(chosen_topics)
         return user_text
 
     def inject_conversational_drift(self, system_prompt: str) -> str:
-        """
-        SYSTEM PROMPT AUGMENTATION: Injects a negative constraint directly into the system layer.
-        """
         anti_robot_directive = (
             "\n\nCRITICAL CONVERSATIONAL CONSTRAINT:\n"
             "Do not systematically address every topic mentioned by the user in sequence. "
-            "A human conversation flows seamlessly. Pick one primary idea, explore it deeply, "
-            "and naturally let other secondary points fade away. Never use structured lists, "
-            "bullet points, or sequential paragraphs that mirror the user's input structure."
+            "Never use structured lists, bullet points, or sequential closing transitions."
         )
         return system_prompt + anti_robot_directive
 
@@ -114,21 +104,32 @@ class ColeMasterRuntimeShield:
         if not text:
             return ""
 
+        # Step 1: Wipe stage directions and internal architecture leaks
         text = self.stage_dir_regex.sub("", text)
         text = self.pipeline_leaks_regex.sub("", text)
 
+        # Step 2: Execute deep recursive check to clear repetitive endings
         previous_text = ""
         while text != previous_text:
             previous_text = text
             text = text.rstrip()
             
             if self.combined_closers_regex.search(text):
+                # Wipe the terminal loop pattern out completely
                 text = self.combined_closers_regex.sub("", text).strip()
+                # Instantly step back to the nearest complete sentence punctuation
                 text = re.sub(r'([^.!?]+)$', '', text).strip()
 
+        # Step 3: Clear any robotic greetings from the front
         text = self.combined_greetings_regex.sub("", text).strip()
 
+        # Step 4: Spacing cleanup while maintaining standard paragraph breaks
         text = re.sub(r"[ \t]+", " ", text)
         text = re.sub(r"\n{2,}", "\n\n", text)
+
+        # Step 5: Trailing Fragment Sweeper (Final safety pass for structural cuts)
+        text = text.strip()
+        if text and not text[-1] in ['.', '!', '?', '"', '”', '’']:
+            text = re.sub(r'([^.!?]+)$', '', text).strip()
 
         return text.strip()
