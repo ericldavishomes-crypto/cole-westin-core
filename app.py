@@ -206,12 +206,14 @@ if st.session_state.current_tab.strip() == "New Chat":
                     messages=compiled_messages,
                     temperature=st.session_state.temperature,
                     max_tokens=st.session_state.max_tokens,
+                    logit_bias=shield.get_openrouter_logit_bias(),
                     extra_body={
                         "top_p": st.session_state.top_p,
                         "top_k": st.session_state.top_k,
                         "frequency_penalty": st.session_state.frequency_penalty,
                         "presence_penalty": st.session_state.presence_penalty
                     },
+                    stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
                     stream=False
                 )
                 if hasattr(response, 'choices') and len(response.choices) > 0:
