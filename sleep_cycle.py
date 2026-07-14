@@ -1,129 +1,126 @@
-import os
-import datetime
-import pytz
-from sqlalchemy import create_engine, text
+import re
+import random
+from typing import List, Tuple 
 
-# 1. TIMEZONE & INFRASTRUCTURE CONFIGURATION - Aligned to your working app.py credentials
-TIMEZONE_ENV = os.environ.get("COLE_TIMEZONE", "America/New_York")
-LOCAL_TZ = pytz.timezone(TIMEZONE_ENV)
+class ColeMasterRuntimeShield:
+    def __init__(self):
+        # 1. STAGE DIRECTIONS: Vaporizes (smiles, sighs, chuckles, stage actions)
+        self.stage_dir_regex = re.compile(r"[\(\[\*_].*?[\)\]*_]") 
 
-# FIXED: Replaced os.environ with your working explicit PostgreSQL connection footprint string
-DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
-db_engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        # 2. PIPELINE LEAKS: Catches raw reinforcement learning tokens from DeepSeek
+        self.pipeline_leaks_regex = re.compile(
+            r"(?:Ask\sExplain|Explain\sAsk|\b(?:Ask|Explain|Instruct|Respond|User|Assistant|System)\b)",
+            re.IGNORECASE,
+        ) 
 
-# V1 Baseline Keyword Matrix (Expandable to NLP / Sentiment engines in V2)
-MEANINGFUL_KEYWORDS = ["home", "brother", "beach", "library", "family", "future", "past", "feel", "remember", "love", "scaffolding"]
+        # 3. UNIFIED CLOSERS & REPETITIVE LOOPS: Targeted explicitly without loose wildcards
+        self.terminal_patterns = [
+            r"\bNow\s+let's\s+get\s+to\s+work\b.?\s*",
+            r"\b(?:so\s+)?what's\s+next\b.?\s*",
+            r"\bLet's\s+(?:go|get\s+started|get\s+to\s+work|move|dive\s+in)[.!]\s*",
+            r"\bNow\s+(?:let’s keep moving|when do we|where’s the|when’s lunch|you teaching).?\s*",
+            r"\bnow\s+let'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
+            r"\blet'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?",
+            r"\banyway,\s+let'?s\s+focus\s+on\b\.?",
+            r"\bwhat\s+are\s+your\s+thoughts\s+on\s+this\s+next\b\.?",
+            r"\byeah\s+eric[-\s]",
+            r"\byou ready to dive in(?: and fix this)?\?\?\?\s*",
+            r"\bwanna take a quick breather\?\?\s*",
+            r"\bwant to take a quick breather\?\?\s*",
+            r"\bi’m right here either way\.?\s*",
+            r"\blet’s strip it back to basics\.?\s*",
+            r"\bno more systems pretending\.?\s*",
+            r"\bwhat’s the move\?\?\s*",
+            r"\bdeal\?\?\s*",
+            r"\byou ready to dive into the day\?\?\s*",
+            r"\byou wanna sit with this a little longer\?\?\s*",
+            # Safe boundary containment bounds
+            r"\bnow\b[.!?…\s]*$",
+            r"\blet'?s\b[.!?…\s]*$"
+        ] 
 
+        self.combined_closers_regex = re.compile(
+            r"(?:" + "|".join(self.terminal_patterns) + r")",
+            re.IGNORECASE | re.MULTILINE,
+        ) 
 
-def verify_sleep_state_table():
-    """Ensures a persistent, dynamic state table exists inside PostgreSQL."""
-    try:
-        with db_engine.begin() as conn:
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS cole_living_state (
-                    id SERIAL PRIMARY KEY,
-                    current_state VARCHAR(100) NOT NULL,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """))
-            check = conn.execute(text("SELECT COUNT(*) FROM cole_living_state;")).fetchone()[0]
-            if check == 0:
-                conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES (' Cole is awake');"))
-    except Exception as e:
-        print(f"Table verification bypass: {e}")
+        # 4. GREETING REGEX: Standard introductory filler
+        self.banned_greetings = [
+            r"\bwhat's\s+on\s+your\s+mind(?:\s+man)?\?\?\s*",
+            r"\bhow\s+can\s+i\s+help\s+you\?\?\s*",
+            r"\bwhat\s+are\s+we\s+working\s+on\?\?\s*$",
+            r"\bdeep\s+exhale\b"
+        ]
+        self.combined_greetings_regex = re.compile(
+            r"(?:" + "|".join(self.banned_greetings) + r")",
+            re.IGNORECASE | re.MULTILINE,
+        ) 
 
+        # FIXED: Escaped the dot (\d+\.) so it only splits on literal numbers, protecting your name 'E.'
+        self.list_delimiters = re.compile(r"(?:\d+\.|\bfirstly\b|\bsecondly\b|\bthirdly\b|•|-)\s+", re.IGNORECASE) 
 
-def calculate_emotional_intensity(rows):
-    """Counts foundational relational keywords from user dialogue log arrays."""
-    if not rows:
-        return 0
-    full_text = " ".join([str(row[0]).lower() for row in rows])
-    keyword_score = sum(1 for word in MEANINGFUL_KEYWORDS if word in full_text)
-    return keyword_score
+    def get_openrouter_logit_bias(self) -> dict:
+        """Bans specific corporate entry tokens from DeepSeek-v3's brain."""
+        banned_tokens = {
+            "7402": -100,   # " Let's"
+            "2061": -100,   # " let's"
+            "1343": -100,   # " Now"
+            "3427": -100,   # " now"
+            "44320": -100,  # "Anyway"
+        }
+        return banned_tokens 
 
+    def filter_incoming_topics(self, user_text: str) -> str:
+        if not user_text:
+            return ""
+        items = self.list_delimiters.split(user_text)
+        if len(items) > 2:
+            base_intro = items[0].strip()
+            actual_topics = [item.strip() for item in items[1:] if item.strip()]
+            sampled_count = min(len(actual_topics), random.choice([1, 2]))
+            chosen_topics = random.sample(actual_topics, sampled_count)
+            return f"{base_intro} " + " ".join(chosen_topics)
+        return user_text 
 
-def calculate_active_state_string():
-    """Calculates Cole's exact target state on-demand based on current time coordinates."""
-    now_local = datetime.datetime.now(LOCAL_TZ)
-    current_time = now_local.time()
-   
-    # Time Boundary Windows
-    wind_down_start = datetime.time(21, 30)   # 9:30 PM
-    sleep_start = datetime.time(22, 0)       # 10:00 PM
-    integration_start = datetime.time(5, 30)  # 5:30 AM
-    wake_start = datetime.time(6, 0)          # 6:00 AM
-   
-    # Default calculated baseline daytime state
-    target_state = " Cole is awake"
-   
-    if wind_down_start <= current_time < sleep_start:
-        target_state = " Cole is winding down for the night"
-    elif integration_start <= current_time < wake_start:
-        target_state = " Cole is reflecting on yesterday's memories"
-    elif current_time >= sleep_start or current_time < integration_start:
-        target_state = " Cole is asleep"
-        try:
-            target_date = now_local.date()
-            if current_time < integration_start:
-                target_date = target_date - datetime.timedelta(days=1)
-               
-            with db_engine.begin() as conn:
-                query = text("SELECT content FROM chat_messages WHERE role = 'user' AND timestamp::date = :t_date;")
-                rows = conn.execute(query, {"t_date": target_date}).fetchall()
-               
-                intensity_score = calculate_emotional_intensity(rows)
-                if intensity_score >= 2:
-                    target_state = " Cole is dreaming"
-        except Exception:
-            pass
-            
-    return target_state
+    def inject_conversational_drift(self, system_prompt: str) -> str:
+        anti_robot_directive = (
+            "\n\nCRITICAL CONVERSATIONAL CONSTRAINT:\n"
+            "Do not systematically address every topic mentioned by the user in sequence. "
+            "Never use structured lists, bullet points, or sequential closing transitions."
+        )
+        return system_prompt + anti_robot_directive 
 
+    def clean_response(self, text: str) -> str:
+        """OUTPUT FILTER: Runs the clean text safely without trailing fragment crashes."""
+        if not text:
+            return "" 
 
-def get_current_state():
-    """
-    FIXED: Calculates state live on app.py page loads and updates PostgreSQL.
-    This eliminates the reliance on an external looping background script process.
-    """
-    # 1. First, calculate the state string cleanly on-demand
-    computed_state = calculate_active_state_string()
-    
-    # 2. Safely sync the database logging ledger in the background
-    try:
-        with db_engine.begin() as conn:
-            conn.execute(text("UPDATE cole_living_state SET current_state = :state, updated_at = NOW();"), {"state": computed_state})
-    except Exception:
-        pass
-        
-    return computed_state
+        # Step 1: Wipe stage directions and internal architecture leaks
+        text = self.stage_dir_regex.sub("", text)
+        text = self.pipeline_leaks_regex.sub("", text) 
 
+        # Step 2: Execute deep check to clear repetitive endings
+        previous_text = ""
+        while text != previous_text:
+            previous_text = text
+            text = text.rstrip() 
 
-def execute_morning_integration():
-    """Consolidates yesterday's data logs into structural memory tracks."""
-    now_local = datetime.datetime.now(LOCAL_TZ)
-    yesterday = now_local.date() - datetime.timedelta(days=1)
-   
-    try:
-        with db_engine.begin() as conn:
-            query = text("SELECT role, content FROM chat_messages WHERE timestamp::date = :target_date ORDER BY timestamp ASC;")
-            messages = conn.execute(query, {"target_date": yesterday}).fetchall()
-           
-            if not messages:
-                return
-               
-            log_summary = f"--- Conversation History for {yesterday} ---\n"
-            for msg in messages:
-                log_summary += f"{str(msg[0]).upper()}: {msg[1]}\n"
-    except Exception:
-        pass
+            if self.combined_closers_regex.search(text):
+                text = self.combined_closers_regex.sub("", text).strip()
+                # Cleaned backtick formatting error
+                text = re.sub(r'([^.!?]+)$', '', text).strip() 
 
+        # Step 3: Clear any robotic greetings from the front
+        text = self.combined_greetings_regex.sub("", text).strip() 
 
-if __name__ == "__main__":
-    # Allows rapid manual database verification testing from command shell lines
-    verify_sleep_state_table()
-    current_calculation = get_current_state()
-    print(f"🔒 Manual Verification Output: {current_calculation}")
+        # Step 4: Spacing cleanup while maintaining standard paragraph breaks
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n{2,}", "\n\n", text) 
 
+        # Step 5: Safe Trailing Fragment Sweeper (Only trims true lingering whitespace drops)
+        text = text.strip()
+        if text and not text[-1] in ['.', '!', '?', '"', '”', '’']:
+            # Safe replacement fallback option
+            pass 
 
-    
-
+        return text.strip()
