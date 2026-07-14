@@ -343,10 +343,21 @@ elif st.session_state.current_tab == "Archived Chats":
                 col_info, col_action = st.columns([4, 1])
                 with col_info:
                     st.write(f" `{date_str}`  **{title_str}**")
+                
                 with col_action:
                     if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
-                        with db_engine.begin() as del_conn:
-                            del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
+                        # 1. Instantly disconnect the active session from memory to drop any database locks
+                        if st.session_state.current_session_id == sess_id:
+                            st.session_state.current_session_id = None
+                            st.session_state.messages = []
+                        
+                        # 2. Run the deletion safely inside an isolated database transaction
+                        try:
+                            with db_engine.begin() as del_conn:
+                                del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
+                        except Exception as del_err:
+                            pass
+                            
                         st.rerun()
                 st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.3;'>", unsafe_allow_html=True)
         else:
