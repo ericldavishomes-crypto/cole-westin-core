@@ -94,10 +94,8 @@ q_client = QdrantClient(url=QDRANT_URL, api_key="qdrant")
 
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
-if st.session_state.current_session_id is None:
+if "current_session_id" not in st.session_state or st.session_state.current_session_id is None:
     st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    with db_engine.begin() as conn:
-        conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
@@ -106,10 +104,8 @@ with st.sidebar:
 
 
     if st.button(" New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
-        st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        st.session_state.messages = [{"role": "system", "content": system_prompt}]
-        with db_engine.begin() as conn:
-            conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
+        st.session_state.current_session_id = None
+        st.session_state.messages = []
         st.session_state.current_tab = "New Chat"
         st.rerun()
 
