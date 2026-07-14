@@ -5,11 +5,12 @@ import base64
 import requests
 import asyncio
 from openai import OpenAI
+from qdrant_client import QdrantClient  
 import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
 import sleep_cycle
-from cole_shield import ColeMasterRuntimeShield
+from cole_shield import ColeMasterRuntimeShield 
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
@@ -84,9 +85,13 @@ except Exception as e:
 
 OPENROUTER_API_KEY = "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"
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
-EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
+EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl" 
 
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
+
+QDRANT_URL = "http://cole-memory-index:6333"
+q_client = QdrantClient(url=QDRANT_URL, api_key="qdrant")
+
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
 if st.session_state.current_session_id is None:
@@ -281,45 +286,39 @@ elif st.session_state.current_tab == "Advanced Parameters":
 
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    
-    # Maps out your 5 specialized Qdrant collection names
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
+
     collections_map = {
         "core_identity_continuity": "Core Identity & Continuity",
         "cognitive_scaffolding": "Cole Cognitive Scaffolding System",
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
         "embodiment_deployment": "Embodiment & Deployment"
-    }
-    
+    } 
+
     try:
-        # Import your newly created memory client block
-        import cole_knowledge
-        
-        # Ping the active cluster using the client we built inside cole_knowledge
         st.success(" Knowledge Connection Active")
-        st.markdown("---")
-        
+        st.markdown("---") 
+
         for q_name, clean_name in collections_map.items():
             try:
-                col_desc = cole_knowledge.q_client.get_collection(collection_name=q_name)
+                col_desc = q_client.get_collection(collection_name=q_name)
                 vector_count = col_desc.points_count
             except Exception:
-                vector_count = 0
-                
-            # Safely wrap the rows in a uniquely keyed container to avoid key clashes
+                vector_count = 0 
+
             with st.container(key=f"vault_row_{q_name}"):
-                col_a, col_b = st.columns([3, 1])
+                col_a, col_b = st.columns()
                 with col_a:
                     st.write(f"**{clean_name}**")
                 with col_b:
                     st.code(f"{vector_count} Layers Loaded")
-            st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
-            
+            st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True) 
+
     except Exception as q_err:
         st.error("🔒 Vector Sync Standby Mode: Waiting for active credentials pipeline.")
-        st.caption(f"Status Note: {q_err}")
-        
+        st.caption(f"Status Note: {q_err}") 
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab == "Archived Chats":
