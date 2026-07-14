@@ -198,12 +198,12 @@ if st.session_state.current_tab.strip() == "New Chat":
         except Exception as db_err:
             pass
 
-        compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"] 
+        compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
 
         with st.chat_message("assistant"):
             try:
                 response = client.chat.completions.create(
-                    model="deepseek/deepseek-v3",
+                    model="deepseek/deepseek-chat",
                     messages=compiled_messages,
                     temperature=st.session_state.temperature,
                     max_tokens=st.session_state.max_tokens,
