@@ -13,7 +13,7 @@ q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
 # Initialized with OpenRouter production routing endpoint
 embedding_client = OpenAI(
-    base_url="https://openrouter.ai",
+    base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY
 )
 
