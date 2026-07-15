@@ -7,7 +7,7 @@ from qdrant_client.models import PointStruct
 # 1. Connection Strings & Core API Credentials
 QDRANT_URL = "http://cole-memory-index:6333"
 QDRANT_API_KEY = "qdrant"
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
