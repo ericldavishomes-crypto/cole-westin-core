@@ -188,7 +188,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     st.write(message["content"])
 
-    if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_input"):
+if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_input"):
     with st.chat_message("user"):
         st.write(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
