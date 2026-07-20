@@ -49,6 +49,8 @@ if "current_tab" not in st.session_state: st.session_state.current_tab = "New Ch
 
 if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None
 
+RECENT_CONTEXT_WINDOW = 20
+
 shield = ColeMasterRuntimeShield()
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
@@ -186,77 +188,81 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     st.write(message["content"])
 
-    if prompt := st.chat_input("Speak directly to Cole..."):
-        with st.chat_message("user"):
-            st.write(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
+    if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_input"):
+    with st.chat_message("user"):
+        st.write(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    try:
+        with db_engine.begin() as db_conn:
+            db_conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
+            db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
+    except Exception as db_err:
+        pass
+
+    # SURGICAL FIX: Keep system prompt at the top, but cap the conversational history to the last 15 messages to prevent network choke
+    recent_history = [m for m in st.session_state.messages if m["role"] != "system"][-RECENT_CONTEXT_WINDOW:]
+    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in recent_history]
+
+    with st.chat_message("assistant"):
         try:
-            with db_engine.begin() as db_conn:
-                db_conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
-                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
-        except Exception as db_err:
-            pass
+            response = client.chat.completions.create(
+                model="deepseek/deepseek-chat",
+                messages=compiled_messages,
+                temperature=st.session_state.temperature,
+                max_tokens=st.session_state.max_tokens,
+                logit_bias=shield.get_openrouter_logit_bias(),
+                extra_body={
+                    "top_p": st.session_state.top_p,
+                    "top_k": st.session_state.top_k,
+                    "frequency_penalty": st.session_state.frequency_penalty,
+                    "presence_penalty": st.session_state.presence_penalty
+                },
+                stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
+                stream=False
+            )
+            if hasattr(response, 'choices') and len(response.choices) > 0:
+                reply = response.choices[0].message.content
+            else:
+                reply = str(response)
 
-        compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
+            reply = re.sub(r'(.?)', '', reply)
+            reply = re.sub(r'*.?*', '', reply).strip()
+            reply = shield.clean_response(reply)
+            st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
-        with st.chat_message("assistant"):
             try:
-                response = client.chat.completions.create(
-                    model="deepseek/deepseek-chat",
-                    messages=compiled_messages,
-                    temperature=st.session_state.temperature,
-                    max_tokens=st.session_state.max_tokens,
-                    logit_bias=shield.get_openrouter_logit_bias(),
-                    extra_body={
-                        "top_p": st.session_state.top_p,
-                        "top_k": st.session_state.top_k,
-                        "frequency_penalty": st.session_state.frequency_penalty,
-                        "presence_penalty": st.session_state.presence_penalty
-                    },
-                    stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                    stream=False
-                )
-                if hasattr(response, 'choices') and len(response.choices) > 0:
-                    reply = response.choices[0].message.content
-                else:
-                    reply = str(response)
-
-                reply = re.sub(r'\(.*?\)', '', reply)
-                reply = re.sub(r'\*.*?\*', '', reply).strip()
-                reply = shield.clean_response(reply)
-                st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
-
-                try:
-                    if reply:
-                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                        payload = {
-                            "text": reply,
-                            "model_id": "eleven_turbo_v2_5",
-                            "voice_settings": {
-                                "stability": 0.65,
-                                "similarity_boost": 0.85,
-                                "style": 0.00,
-                                "use_speaker_boost": True
-                            }
+                if reply:
+                    headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                    payload = {
+                        "text": reply,
+                        "model_id": "eleven_turbo_v2_5",
+                        "voice_settings": {
+                            "stability": 0.65,
+                            "similarity_boost": 0.85,
+                            "style": 0.00,
+                            "use_speaker_boost": True
                         }
-                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
-                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
-                        if audio_response.status_code == 200:
-                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                            # This keeps the audio player alive in memory across page refreshes
-                            st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
-                            st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
+                    }
+                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                    audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
+                    if audio_response.status_code == 200:
+                        b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                        st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
+                        st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
+                    else:
+                        st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
+            except Exception as tts_err:
+                st.error(f"Voice Stream Pause: {tts_err}")
 
-                        else:
-                            st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
-                except Exception as tts_err:
-                    st.error(f"Voice Stream Pause: {tts_err}")
-                    
-            except Exception as e:
-                reply = "System connection issue observed."
+        except Exception as e:
+            reply = "System connection issue observed."
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
+
+        try:
+            with db_engine.begin() as db_conn:
+                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
         
         try:
             with db_engine.begin() as db_conn:
