@@ -226,8 +226,8 @@ if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_
             else:
                 reply = str(response)
 
-            reply = re.sub(r'(.?)', '', reply)
-            reply = re.sub(r'*.?*', '', reply).strip()
+            #reply = re.sub(r'(.?)', '', reply)
+            #reply = re.sub(r'*.?*', '', reply).strip()
             reply = shield.clean_response(reply)
             st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
