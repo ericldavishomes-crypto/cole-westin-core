@@ -264,10 +264,6 @@ if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
         
-        try:
-            with db_engine.begin() as db_conn:
-                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
-                
                 current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
                 if current_title_check and current_title_check[0] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
