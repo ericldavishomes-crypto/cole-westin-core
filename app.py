@@ -90,7 +90,7 @@ EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
 
 QDRANT_URL = "http://cole-memory-index:6333"
-q_client = QdrantClient(url=QDRANT_URL, api_key="qdrant")
+q_client = QdrantClient(url="https://p01--cole-memory-index--6j75mt24x9rl.code.run", api_key="qdrant")
 
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
