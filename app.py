@@ -307,14 +307,18 @@ elif st.session_state.current_tab.strip() == "Knowledge":
         file_records = objects_resp.get('Contents', [])
         total_files = len(file_records)
         with col_v1:
-            st.metric(label="Vault Connection Status", value="Connected 🟢")
+            st.write("🔒 **Vault Status**")
+            st.write("Connected 🟢")
         with col_v2:
-            st.metric(label="Active Storage Buckets", value=str(len(bucket_list)))
+            st.write("📁 **Active Buckets**")
+            st.write(str(len(bucket_list)))
         with col_v3:
-            st.metric(label="Indexed Scaffolding Files", value=str(total_files))
+            st.write("📄 **Indexed Files**")
+            st.write(str(total_files))
     except Exception as storage_err:
         with col_v1:
-            st.metric(label="Vault Connection Status", value="Offline 🔒")
+            st.write("🔒 **Vault Status**")
+            st.write("Offline 🔴")
         st.markdown(f"<p style='color:#ff4b4b; font-size:14px;'>Storage Bridge Sync: {storage_err}</p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
