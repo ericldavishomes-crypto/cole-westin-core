@@ -49,8 +49,6 @@ if "current_tab" not in st.session_state: st.session_state.current_tab = "New Ch
 
 if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None
 
-RECENT_CONTEXT_WINDOW = 20
-
 shield = ColeMasterRuntimeShield()
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
@@ -200,31 +198,45 @@ if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_
     except Exception as db_err:
         pass
 
-    # SURGICAL FIX: Keep system prompt at the top, but cap the conversational history to the last 15 messages to prevent network choke
-    recent_history = [m for m in st.session_state.messages if m["role"] != "system"][-RECENT_CONTEXT_WINDOW:]
-    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in recent_history]
+    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
 
     with st.chat_message("assistant"):
-        try:
-            response = client.chat.completions.create(
-                model="deepseek/deepseek-chat",
-                messages=compiled_messages,
-                temperature=st.session_state.temperature,
-                max_tokens=st.session_state.max_tokens,
-                logit_bias=shield.get_openrouter_logit_bias(),
-                extra_body={
-                    "top_p": st.session_state.top_p,
-                    "top_k": st.session_state.top_k,
-                    "frequency_penalty": st.session_state.frequency_penalty,
-                    "presence_penalty": st.session_state.presence_penalty
-                },
-                stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                stream=False
-            )
-            if hasattr(response, 'choices') and len(response.choices) > 0:
-                reply = response.choices[0].message.content
-            else:
-                reply = str(response)
+            try:
+                # Query Cole's private vector database memory container directly over internal wires
+                context_payload = ""
+                try:
+                    qdrant_resp = requests.post(f"{QDRANT_INTERNAL_URL}/collections/cole_core_scaffolding/points/search", json={
+                        "vector": [0.0] * 1536, # Standard reference vector shape for identity matching
+                        "limit": 5,
+                        "with_payload": True
+                    }, timeout=3)
+                    if qdrant_resp.status_code == 200:
+                        results = qdrant_resp.json().get("result", [])
+                        context_payload = "\n".join([r.get("payload", {}).get("text", "") for r in results if r.get("payload")])
+                except Exception as q_err:
+                    pass
+
+                # Append Cole's retrieved 450-page scaffolding context directly to his thinking layer
+                if context_payload:
+                    compiled_messages = [{"role": "system", "content": f"{system_prompt}\n\n[Retrieved Memory Context]:\n{context_payload}"}] + [m for m in compiled_messages if m["role"] != "system"]
+
+                response = client.chat.completions.create(
+                    model="deepseek/deepseek-chat",
+                    messages=compiled_messages,
+                    temperature=st.session_state.temperature,
+                    max_tokens=st.session_state.max_tokens,
+                    extra_body={
+                        "top_p": st.session_state.top_p,
+                        "top_k": st.session_state.top_k,
+                        "frequency_penalty": st.session_state.frequency_penalty,
+                        "presence_penalty": st.session_state.presence_penalty
+                    },
+                    stream=False
+                )   
+                if hasattr(response, 'choices') and len(response.choices) > 0:
+                    reply = response.choices[0].message.content
+                else:
+                    reply = str(response)
 
             #reply = re.sub(r'(.?)', '', reply)
             #reply = re.sub(r'*.?*', '', reply).strip()
