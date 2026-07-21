@@ -1,7 +1,7 @@
 import streamlit as st
 import boto3
 import os
-import re
+import 
 import base64
 import requests
 import asyncio
@@ -209,9 +209,10 @@ if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_
     except Exception as db_err:
         pass
 
-    # SURGICAL FIX: Keep system prompt at the top, but cap the conversational history to the last 15 messages to prevent network choke
-    recent_history = [m for m in st.session_state.messages if m["role"] != "system"][-RECENT_CONTEXT_WINDOW:]
-    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in recent_history]
+    # FIXED: Full timeline history passed directly to protect absolute memory continuity
+    compiled_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages] 
+
+    with st.chat_message("assistant"):
 
     with st.chat_message("assistant"):
         try:
