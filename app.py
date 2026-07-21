@@ -90,7 +90,7 @@ EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
 
 QDRANT_URL = "http://cole-memory-index:6333"
-q_client = QdrantClient(
+q_client = QdrantClient(url=QDRANT_URL)
     url="https://p01--cole-memory-index--6j75mt24x9rl.code.run", 
     api_key="qdrant", 
     check_compatibility=False
