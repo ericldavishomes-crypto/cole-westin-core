@@ -340,7 +340,7 @@ elif st.session_state.current_tab == "Archived Chats":
             st.markdown("*No archived conversation records found in PostgreSQL database ledger.*")
     except Exception as e:
         st.markdown("🔒 *Timeline logging index paused on active live standby mode.*")
-    st.markdown('</div>', unsafe_allow_html=True)f
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("### Database Thread Manager")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
