@@ -294,7 +294,29 @@ elif st.session_state.current_tab == "Advanced Parameters":
 
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+ 
+    col_v1, col_v2, col_v3 = st.columns(3)
+    try:
+        buckets_resp = minio_client.list_buckets()
+        bucket_list = [b['Name'] for b in buckets_resp.get('Buckets', [])]
+        target_bucket = "cole-identity-vault"
+        if target_bucket not in bucket_list:
+            minio_client.create_bucket(Bucket=target_bucket)
+        objects_resp = minio_client.list_objects_v2(Bucket=target_bucket)
+        file_records = objects_resp.get('Contents', [])
+        total_files = len(file_records)
+        with col_v1:
+            st.metric(label="Vault Connection Status", value="Connected 🟢")
+        with col_v2:
+            st.metric(label="Active Storage Buckets", value=str(len(bucket_list)))
+        with col_v3:
+            st.metric(label="Indexed Scaffolding Files", value=str(total_files))
+    except Exception as storage_err:
+        with col_v1:
+            st.metric(label="Vault Connection Status", value="Offline 🔒")
+        st.markdown(f"<p style='color:#ff4b4b; font-size:14px;'>Storage Bridge Sync: {storage_err}</p>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     collections_map = {
         "core_identity_continuity": "Core Identity & Continuity",
