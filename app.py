@@ -1,7 +1,7 @@
 import streamlit as st
 import boto3
 import os
-import re
+import re 
 import base64
 import requests
 import asyncio
@@ -200,19 +200,17 @@ if st.session_state.current_tab.strip() == "New Chat":
 if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_input"):
     with st.chat_message("user"):
         st.write(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append({"role": "user", "content": prompt}) 
 
     try:
         with db_engine.begin() as db_conn:
             db_conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
             db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
     except Exception as db_err:
-        pass
+        pass 
 
     # FIXED: Full timeline history passed directly to protect absolute memory continuity
     compiled_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages] 
-
-    with st.chat_message("assistant"):
 
     with st.chat_message("assistant"):
         try:
