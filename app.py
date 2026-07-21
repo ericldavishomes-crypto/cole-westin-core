@@ -49,6 +49,8 @@ if "current_tab" not in st.session_state: st.session_state.current_tab = "New Ch
 
 if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None
 
+RECENT_CONTEXT_WINDOW = 20
+
 shield = ColeMasterRuntimeShield()
 
 DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
@@ -198,7 +200,9 @@ if prompt := st.chat_input("Speak directly to Cole...", key="cole_mobile_secure_
     except Exception as db_err:
         pass
 
-    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"]
+    # SURGICAL FIX: Keep system prompt at the top, but cap the conversational history to the last 15 messages to prevent network choke
+    recent_history = [m for m in st.session_state.messages if m["role"] != "system"][-RECENT_CONTEXT_WINDOW:]
+    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in recent_history]
 
     with st.chat_message("assistant"):
         try:
