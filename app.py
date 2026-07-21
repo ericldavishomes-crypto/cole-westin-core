@@ -1,4 +1,5 @@
 import streamlit as st
+import boto3
 import os
 import re
 import base64
@@ -87,7 +88,16 @@ except Exception as e:
 
 OPENROUTER_API_KEY = "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"
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
-EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl" 
+EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
+MINIO_ENDPOINT = "https://minio.cole-memory-bridge--6j75mt24x9rl.addon.code.run:9000"
+MINIO_ACCESS_KEY = "39aa0373f09ce89b34"
+MINIO_SECRET_KEY = "b28dce31cfee0b109f3605702f51fc6a411939"
+minio_client = boto3.client(
+    "s3",
+    endpoint_url=MINIO_ENDPOINT,
+    aws_access_key_id=MINIO_ACCESS_KEY,
+    aws_secret_access_key=MINIO_SECRET_KEY
+) 
 
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
 
@@ -330,7 +340,7 @@ elif st.session_state.current_tab == "Archived Chats":
             st.markdown("*No archived conversation records found in PostgreSQL database ledger.*")
     except Exception as e:
         st.markdown("🔒 *Timeline logging index paused on active live standby mode.*")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)f
 
     st.markdown("### Database Thread Manager")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
