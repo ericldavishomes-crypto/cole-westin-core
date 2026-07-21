@@ -50,8 +50,6 @@ if "current_tab" not in st.session_state: st.session_state.current_tab = "New Ch
 
 if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None 
 
-RECENT_CONTEXT_WINDOW = 20 
-
 shield = ColeMasterRuntimeShield() 
 
 # PERMANENT PRIVATE NETWORK FIX FOR POSTGRESQL
@@ -102,7 +100,7 @@ minio_client = boto3.client(
     aws_secret_access_key=MINIO_SECRET_KEY
 ) 
 
-client = OpenAI(base_url="https://openrouter.ai/api/v1ele", api_key=str(OPENROUTER_API_KEY).strip()) 
+client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip()) 
 
 QDRANT_URL = "http://cole-memory-index:6333"
 q_client = QdrantClient(url=QDRANT_URL) 
