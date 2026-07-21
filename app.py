@@ -102,7 +102,7 @@ minio_client = boto3.client(
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
 
 QDRANT_URL = "http://cole-memory-index:6333"
-q_client = QdrantClient(url=QDRANT_URL, api_key="qdrant")
+q_client = QdrantClient(url=QDRANT_URL)
 
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
 
