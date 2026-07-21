@@ -6,3 +6,4 @@ pandas
 requests
 pytz
 qdrant-client
+boto3
