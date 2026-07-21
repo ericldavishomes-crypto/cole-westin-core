@@ -178,13 +178,13 @@ else:
             with db_engine.begin() as conn:
                 db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
                 if db_msgs:
-                st.session_state.messages = [{"role": "system", "content": system_prompt}]
-                for m in db_msgs:
-                    st.session_state.messages.append({"role": m[0], "content": m[1]})
-            else:
-                st.session_state.messages = [{"role": "system", "content": system_prompt}]
-    except Exception as e:
-        st.session_state.messages = [{"role": "system", "content": system_prompt}]
+                    st.session_state.messages = [{"role": "system", "content": system_prompt}]
+                    for m in db_msgs:
+                        st.session_state.messages.append({"role": m[0], "content": m[1]})
+                else:
+                    st.session_state.messages = [{"role": "system", "content": system_prompt}]
+        except Exception as e:
+            st.session_state.messages = [{"role": "system", "content": system_prompt}]
 
 st.session_state.initial_sidebar_state = "expanded"
 
