@@ -6,7 +6,7 @@ import base64
 import requests
 import asyncio
 from openai import OpenAI
-from qdrant_client import QdrantClient  
+from qdrant_client import QdrantClient
 import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
@@ -14,7 +14,7 @@ import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield 
 
 os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
-st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded") 
 
 st.markdown("""<style>
 header { background-color: transparent !important; box-shadow: none !important; }
@@ -22,7 +22,7 @@ header { background-color: transparent !important; box-shadow: none !important; 
 [data-testid="stSidebar"] { background-color: #f7f7f8 !important; border-right: 1px solid #e5e5e7 !important; }
 .stChatMessage { background-color: transparent !important; border: none !important; margin-bottom: 28px !important; padding: 0px 15% !important; width: 100% !important; }
 div[data-testid="stChatMessageAvatarUser"], div[data-testid="stChatMessageAvatarAssistant"], .stChatMessage [data-testid="chat-avatar"] { display: none !important; visibility: hidden !important; width: 0px !important; height: 0px !important; }
-div[data-testid="stChatMessageContent"] { padding-left: 0px !important;shield margin-left: 0px !important; width: 100% !important; }
+div[data-testid="stChatMessageContent"] { padding-left: 0px !important; margin-left: 0px !important; width: 100% !important; }
 div[data-testid="stChatMessageContent"] [data-testid="stMarkdown"] { width: 100% !important; }
 [data-testid="chat-message-user"] p, [data-testid="chat-message-user"] span { color: #111111 !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; font-size: 16px !important; line-height: 1.6 !important; }
 [data-testid="chat-message-assistant"] p, [data-testid="chat-message-assistant"] span { color: #0A192F !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; font-size: 16px !important; line-height: 1.6 !important; font-weight: 450 !important; }
@@ -37,7 +37,7 @@ div[data-testid="stChatInput"]:focus-within { border: 1.5px solid #0A192F !impor
 .admin-table th { background-color: #f3f3f6; }
 .status-dot { height: 10px; width: 10px; background-color: #24b47e; border-radius: 50%; display: inline-block; margin-left: 8px; }
 div.stButton > button { background-color: #f3f3f6 !important; color: #55555d !important; border: 1px solid #e5e5e7 !important; border-radius: 20px !important; padding: 6px 16px !important; font-weight: 500 !important; }
-div.stButton > button:hover { background-color: #e5e5e7 !important; color: #111111 !important; }</style>""", unsafe_allow_html=True)
+div.stButton > button:hover { background-color: #e5e5e7 !important; color: #111111 !important; }</style>""", unsafe_allow_html=True) 
 
 if "temperature" not in st.session_state: st.session_state.temperature = 0.80
 if "max_tokens" not in st.session_state: st.session_state.max_tokens = 350
@@ -46,50 +46,53 @@ if "top_k" not in st.session_state: st.session_state.top_k = 50
 if "frequency_penalty" not in st.session_state: st.session_state.frequency_penalty = 0.00
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
-if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat"
+if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat" 
 
-if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None
+if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None 
 
-RECENT_CONTEXT_WINDOW = 20
+RECENT_CONTEXT_WINDOW = 20 
 
-shield = ColeMasterRuntimeShield()
+shield = ColeMasterRuntimeShield() 
 
-DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
+# PERMANENT PRIVATE NETWORK FIX FOR POSTGRESQL
+DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database:5432/_a1191c7d7e30" 
 
 @st.cache_resource
 def get_postgres_engine():
-    return create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20)
+    return create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20) 
 
-db_engine = get_postgres_engine()
+db_engine = get_postgres_engine() 
 
 def verify_scaffolding_tables():
     with db_engine.begin() as conn:
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS chat_sessions (
-                session_id VARCHAR(50) PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+        session_id VARCHAR(50) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
         """))
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS chat_messages (
-                id SERIAL PRIMARY KEY,
-                session_id VARCHAR(50) REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
-                role VARCHAR(20) NOT NULL,
-                content TEXT NOT NULL,
-                timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-        """))
+        CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(50) REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL,
+        content TEXT NOT NULL,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """)) 
 
 try:
     verify_scaffolding_tables()
 except Exception as e:
-    st.error(f"Database sync pause: {e}")
+    st.error(f"Database sync pause: {e}") 
 
 OPENROUTER_API_KEY = "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"
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
-MINIO_ENDPOINT = "https://minio.cole-memory-bridge--6j75mt24x9rl.addon.code.run:9000"
+
+# PERMANENT PRIVATE NETWORK FIX FOR MINIO
+MINIO_ENDPOINT = "http://cole-memory-bridge:9000"
 MINIO_ACCESS_KEY = "39aa0373f09ce89b34"
 MINIO_SECRET_KEY = "b28dce31cfee0b109f3605702f51fc6a411939"
 minio_client = boto3.client(
@@ -99,27 +102,26 @@ minio_client = boto3.client(
     aws_secret_access_key=MINIO_SECRET_KEY
 ) 
 
-client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
+client = OpenAI(base_url="https://openrouter.ai/api/v1ele", api_key=str(OPENROUTER_API_KEY).strip()) 
 
 QDRANT_URL = "http://cole-memory-index:6333"
-q_client = QdrantClient(url=QDRANT_URL)
+q_client = QdrantClient(url=QDRANT_URL) 
 
-system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
+system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.") 
 
 if "current_session_id" not in st.session_state or st.session_state.current_session_id is None:
-    st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
 
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
     status = sleep_cycle.get_current_state()
     st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True)
 
-
     if st.button(" New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
         st.session_state.current_session_id = None
         st.session_state.messages = []
         st.session_state.current_tab = "New Chat"
-        st.rerun()
+        st.rerun() 
 
     try:
         with db_engine.begin() as conn:
@@ -128,25 +130,25 @@ with st.sidebar:
                 if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}_{st.session_state.current_tab.strip()}", use_container_width=True):
                     st.session_state.current_session_id = s[0]
                     st.session_state.current_tab = "New Chat"
-                    st.session_state.messages = []  # Forces re-fetch for targeted session
+                    st.session_state.messages = [] 
                     st.rerun()
     except Exception as e:
-        st.text("History tracking offline...")
+        st.text("History tracking offline...") 
 
     try:
         with db_engine.begin() as purge_conn:
             purge_conn.execute(text("""
-                DELETE FROM chat_sessions
-                WHERE title = 'New Chat'
-                AND created_at < NOW() - INTERVAL '3 minutes'
-                AND session_id NOT IN (SELECT DISTINCT session_id FROM chat_messages);
+            DELETE FROM chat_sessions
+            WHERE title = 'New Chat'
+            AND created_at < NOW() - INTERVAL '3 minutes'
+            AND session_id NOT IN (SELECT DISTINCT session_id FROM chat_messages);
             """))
     except Exception as e:
-        pass
+        pass 
 
-st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True)
+st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True) 
 
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns(5) 
 
 with col1:
     if st.button("New Chat", use_container_width=True, key="nav_btn_new_chat"):
@@ -168,17 +170,16 @@ with col5:
     if st.button("Administrative Panel", use_container_width=True, key="nav_btn_admin"):
         st.session_state.current_tab = "Administrative Panel"
         st.rerun()
+
 if st.session_state.current_tab.strip() != "New Chat":
-    # If we are on Knowledge, do not run any chat logic. Skip straight to the bottom!
     pass
 else:
-    # Otherwise, we are on New Chat, so run the database synchronization safely
     if "messages" not in st.session_state or not st.session_state.messages:
         st.session_state.messages = []
-    try:
-        with db_engine.begin() as conn:
-            db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
-            if db_msgs:
+        try:
+            with db_engine.begin() as conn:
+                db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
+                if db_msgs:
                 st.session_state.messages = [{"role": "system", "content": system_prompt}]
                 for m in db_msgs:
                     st.session_state.messages.append({"role": m[0], "content": m[1]})
