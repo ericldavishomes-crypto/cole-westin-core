@@ -233,7 +233,7 @@ if prompt := st.chat_input("Speak directly to Cole..."):
             st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
 
             try:
-                if reply and reply != "System connection issue observed.":
+                if False: # Temporarily bypassed voice to verify text core
                     headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
                     payload = {
                         "text": reply,
