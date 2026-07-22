@@ -52,7 +52,7 @@ if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_ht
 shield = ColeMasterRuntimeShield() 
 
 # FIXED: Strict internal private cloud address to prevent network changes from breaking connectivity
-DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@cole-soul-database.addons.internal:5432/_a1191c7d7e30" 
+DATABASE_URL = os.environ.get("DATABASE_URL") 
 
 @st.cache_resource
 def get_postgres_engine():
