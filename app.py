@@ -13,7 +13,11 @@ import pandas as pd
 import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield 
 
-os.environ["OPENAI_API_KEY"] = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
+# TEMPORARY CONFIGURATION: Keys loaded directly for verification
+OPENROUTER_API_KEY = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
+EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
+os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
+
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded") 
 
 st.markdown("""<style>
@@ -47,13 +51,15 @@ if "frequency_penalty" not in st.session_state: st.session_state.frequency_penal
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat" 
-
 if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None 
 
 shield = ColeMasterRuntimeShield() 
 
-# Dynamically inherits your verified database credentials link from Northflank
+# SAFEGUARD: Dynamically inherits database credentials, crashes gracefully if empty
 DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    st.error("❌ Critical: DATABASE_URL environment variable is missing. Check Northflank environment configs.")
+    st.stop()
 
 @st.cache_resource
 def get_postgres_engine():
@@ -85,16 +91,15 @@ try:
 except Exception as e:
     st.error(f"Database sync pause: {e}") 
 
-# FIXED: Aligned OpenRouter authorization key with environment token definitions
-OPENROUTER_API_KEY = "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"
-EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl" 
 
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip()) 
 
-# FIXED: Removed public web links and authorization tags for smooth local cluster discovery
 QDRANT_URL = "http://cole-memory-index:6333"
-q_client = QdrantClient(url=QDRANT_URL) 
+try:
+    q_client = QdrantClient(url=QDRANT_URL, timeout=5.0)
+except Exception as e:
+    st.error(f"Failed to bridge Qdrant index context: {e}")
 
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.") 
 
@@ -168,6 +173,7 @@ else:
         try:
             with db_engine.begin() as conn:
                 db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).mappings().fetchall()
+                
                 if db_msgs:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
                     for m in db_msgs:
@@ -207,30 +213,27 @@ if prompt := st.chat_input("Speak directly to Cole..."):
             response = client.chat.completions.create(
                 model="deepseek/deepseek-chat",
                 messages=compiled_messages,
-                temperature=st.session_state.temperature,
-                max_tokens=st.session_state.max_tokens,
+                temperature=float(st.session_state.temperature),
+                max_tokens=int(st.session_state.max_tokens),
+                top_p=float(st.session_state.top_p),
+                frequency_penalty=float(st.session_state.frequency_penalty),
+                presence_penalty=float(st.session_state.presence_penalty),
                 logit_bias=shield.get_openrouter_logit_bias(),
-                extra_body={
-                    "top_p": st.session_state.top_p,
-                    "top_k": st.session_state.top_k,
-                    "frequency_penalty": st.session_state.frequency_penalty,
-                    "presence_penalty": st.session_state.presence_penalty
-                },
                 stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
                 stream=False
             )
+            
             if hasattr(response, 'choices') and len(response.choices) > 0:
                 reply = response.choices.message.content
             else:
                 reply = str(response) 
 
-            reply = re.sub(r'(.?)', '', reply)
-            reply = re.sub(r'\.\?', '', reply).strip()
+            reply = re.sub(r'\s*\n\s*', '\n', reply)
             reply = shield.clean_response(reply)
             st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
 
             try:
-                if reply:
+                if reply and reply != "System connection issue observed.":
                     headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
                     payload = {
                         "text": reply,
@@ -244,6 +247,7 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                     }
                     url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
                     audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
+                    
                     if audio_response.status_code == 200:
                         b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
                         st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
@@ -255,6 +259,7 @@ if prompt := st.chat_input("Speak directly to Cole..."):
 
         except Exception as e:
             reply = "System connection issue observed." 
+            st.error(f"Core operational exception caught: {e}")
 
         st.session_state.messages.append({"role": "assistant", "content": reply}) 
 
@@ -304,7 +309,6 @@ elif st.session_state.current_tab.strip() == "Knowledge":
                 vector_count = 0
 
             with st.container(key=f"vault_row_{q_name}"):
-                # FIXED: Columns receive explicit tuple spec to prevent newer Streamlit version crashes
                 col_a, col_b = st.columns((3, 1))
                 with col_a:
                     st.write(f"{clean_name}")
@@ -341,7 +345,6 @@ elif st.session_state.current_tab == "Archived Chats":
                 title_str = row['title']
                 sess_id = row['session_id']
 
-                # FIXED: Added layout specification specs to prevent layout build truncations
                 col_info, col_action = st.columns((4, 1))
                 with col_info:
                     st.write(f" {date_str} {title_str}")
