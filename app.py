@@ -51,8 +51,8 @@ if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_ht
 
 shield = ColeMasterRuntimeShield() 
 
-# FIXED: Strict internal private cloud address to prevent network changes from breaking connectivity
-DATABASE_URL = os.environ.get("DATABASE_URL") 
+# Dynamically inherits the safe, updateable database variable from your Northflank panel
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 @st.cache_resource
 def get_postgres_engine():
@@ -90,9 +90,9 @@ EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip()) 
 
-# FIXED: Clean variable initialization mapped directly to the local private microservice
+# FIXED: Removed the api_key assignment to instantly clear the internal connection security block
 QDRANT_URL = "http://cole-memory-index:6333"
-q_client = QdrantClient(url=QDRANT_URL, api_key="qdrant") 
+q_client = QdrantClient(url=QDRANT_URL) 
 
 system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.") 
 
@@ -114,8 +114,8 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
             for s in sessions:
-                if st.button(f" {s[1]}", key=f"sidebar_sid_{s[0]}_{st.session_state.current_tab.strip()}", use_container_width=True):
-                    st.session_state.current_session_id = s[0]
+                if st.button(f" {s.title}", key=f"sidebar_sid_{s.session_id}_{st.session_state.current_tab.strip()}", use_container_width=True):
+                    st.session_state.current_session_id = s.session_id
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []
                     st.rerun()
@@ -157,6 +157,7 @@ with col5:
     if st.button("Administrative Panel", use_container_width=True, key="nav_btn_admin"):
         st.session_state.current_tab = "Administrative Panel"
         st.rerun()
+
 if st.session_state.current_tab.strip() != "New Chat":
     pass
 else:
@@ -164,11 +165,11 @@ else:
         st.session_state.messages = []
         try:
             with db_engine.begin() as conn:
-                db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).fetchall()
+                db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).mappings().fetchall()
                 if db_msgs:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
                     for m in db_msgs:
-                        st.session_state.messages.append({"role": m[0], "content": m[1]})
+                        st.session_state.messages.append({"role": m["role"], "content": m["content"]})
                 else:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
         except Exception as e:
@@ -260,7 +261,7 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
 
                 current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
-                if current_title_check and current_title_check[0] == "New Chat":
+                if current_title_check and current_title_check.title == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
         except Exception as db_err:
@@ -301,7 +302,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
                 vector_count = 0
 
             with st.container(key=f"vault_row_{q_name}"):
-                col_a, col_b = st.columns([3, 1])
+                col_a, col_b = st.columns()
                 with col_a:
                     st.write(f"{clean_name}")
                 with col_b:
@@ -337,7 +338,7 @@ elif st.session_state.current_tab == "Archived Chats":
                 title_str = row['title']
                 sess_id = row['session_id']
 
-                col_info, col_action = st.columns([4, 1])
+                col_info, col_action = st.columns()
                 with col_info:
                     st.write(f" {date_str}{title_str}")
 
