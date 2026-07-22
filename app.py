@@ -302,7 +302,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
                 vector_count = 0
 
             with st.container(key=f"vault_row_{q_name}"):
-                col_a, col_b = st.columns()
+                col_a, col_b = st.columns([3, 1])
                 with col_a:
                     st.write(f"{clean_name}")
                 with col_b:
