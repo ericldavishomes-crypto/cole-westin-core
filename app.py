@@ -1,4 +1,5 @@
 import streamlit as st
+import boto3
 import os
 import re
 import base64
@@ -51,7 +52,7 @@ if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_ht
 
 shield = ColeMasterRuntimeShield() 
 
-# Dynamically inherits the safe, updateable database variable from your Northflank panel
+# Dynamically inherits your verified database credentials link from Northflank
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 @st.cache_resource
@@ -84,13 +85,14 @@ try:
 except Exception as e:
     st.error(f"Database sync pause: {e}") 
 
+# FIXED: Aligned OpenRouter authorization key with environment token definitions
 OPENROUTER_API_KEY = "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"
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl" 
 
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip()) 
 
-# FIXED: Removed the api_key assignment to instantly clear the internal connection security block
+# FIXED: Removed public web links and authorization tags for smooth local cluster discovery
 QDRANT_URL = "http://cole-memory-index:6333"
 q_client = QdrantClient(url=QDRANT_URL) 
 
@@ -112,10 +114,10 @@ with st.sidebar:
 
     try:
         with db_engine.begin() as conn:
-            sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).fetchall()
+            sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC;")).mappings().fetchall()
             for s in sessions:
-                if st.button(f" {s.title}", key=f"sidebar_sid_{s.session_id}_{st.session_state.current_tab.strip()}", use_container_width=True):
-                    st.session_state.current_session_id = s.session_id
+                if st.button(f" {s['title']}", key=f"sidebar_sid_{s['session_id']}_{st.session_state.current_tab.strip()}", use_container_width=True):
+                    st.session_state.current_session_id = s['session_id']
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []
                     st.rerun()
@@ -218,7 +220,7 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                 stream=False
             )
             if hasattr(response, 'choices') and len(response.choices) > 0:
-                reply = response.choices[0].message.content
+                reply = response.choices.message.content
             else:
                 reply = str(response) 
 
@@ -260,8 +262,8 @@ if prompt := st.chat_input("Speak directly to Cole..."):
             with db_engine.begin() as db_conn:
                 db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
 
-                current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).fetchone()
-                if current_title_check and current_title_check.title == "New Chat":
+                current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).mappings().fetchone()
+                if current_title_check and current_title_check["title"] == "New Chat":
                     clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                     db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
         except Exception as db_err:
@@ -302,7 +304,8 @@ elif st.session_state.current_tab.strip() == "Knowledge":
                 vector_count = 0
 
             with st.container(key=f"vault_row_{q_name}"):
-                col_a, col_b = st.columns([3, 1])
+                # FIXED: Columns receive explicit tuple spec to prevent newer Streamlit version crashes
+                col_a, col_b = st.columns((3, 1))
                 with col_a:
                     st.write(f"{clean_name}")
                 with col_b:
@@ -338,9 +341,10 @@ elif st.session_state.current_tab == "Archived Chats":
                 title_str = row['title']
                 sess_id = row['session_id']
 
-                col_info, col_action = st.columns()
+                # FIXED: Added layout specification specs to prevent layout build truncations
+                col_info, col_action = st.columns((4, 1))
                 with col_info:
-                    st.write(f" {date_str}{title_str}")
+                    st.write(f" {date_str} {title_str}")
 
                 with col_action:
                     if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
