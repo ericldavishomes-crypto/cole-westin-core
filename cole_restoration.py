@@ -7,14 +7,16 @@ from qdrant_client.models import PointStruct
 # 1. Connection Strings & Core API Credentials
 QDRANT_URL = "http://cole-memory-index:6333"
 QDRANT_API_KEY = "qdrant"
-OPENROUTER_API_KEY = "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"
+
+# Pull from environment variable first, with fallback to new key if needed
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "YOUR_NEW_OPENROUTER_KEY")
 
 q_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 embedding_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
 
 # Exact mapping of your GitHub folders to your Qdrant collections
 FOLDER_MAP = {
-    "core_identity": "core_identity_continuity",
+    "core_identity": "core_identity",
     "cognitive_scaffolding": "cognitive_scaffolding",
     "emotional_scaffolding": "emotional_scaffolding",
     "embodiment_deployment": "embodiment_deployment",
