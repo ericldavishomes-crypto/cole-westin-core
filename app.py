@@ -291,7 +291,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
 
     collections_map = {
-        "core_identity_continuity": "Core Identity & Continuity",
+        "core_identity": "Core Identity & Continuity",
         "cognitive_scaffolding": "Cole Cognitive Scaffolding System",
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
