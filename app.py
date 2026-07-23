@@ -14,7 +14,7 @@ import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield 
 
 # TEMPORARY CONFIGURATION: Keys loaded directly for verification
-OPENROUTER_API_KEY = "sk-or-v1-11b3a1aabcee2dfbcf139b023afa68eec1052164a052440ae236721d180e18"
+OPENROUTER_API_KEY = "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"
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
 
