@@ -220,15 +220,14 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                 presence_penalty=float(st.session_state.presence_penalty),
                 logit_bias=shield.get_openrouter_logit_bias(),
                 stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                stream=False
+                stream=False,
             )
             
             if hasattr(response, 'choices') and len(response.choices) > 0:
                 reply = response.choices[0].message.content
             else:
                 reply = str(response)
-            else:
-                reply = str(response) 
+             
 
             reply = re.sub(r'\s*\n\s*', '\n', reply)
             reply = shield.clean_response(reply)
