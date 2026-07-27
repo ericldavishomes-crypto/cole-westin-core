@@ -206,31 +206,35 @@ if prompt := st.chat_input("Speak directly to Cole..."):
     except Exception as db_err:
         pass 
 
-    compiled_messages = [{"role": "system", "content": system_prompt}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"] 
+    compiled_messages = [{"role": "system", "content": system_prompt}] + [
+                {"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"
+            ] 
 
-    with st.chat_message("assistant"):
-        try:
-            response = client.chat.completions.create(
-                model="deepseek/deepseek-chat",
-                messages=compiled_messages,
-                temperature=float(st.session_state.temperature),
-                max_tokens=int(st.session_state.max_tokens),
-                top_p=float(st.session_state.top_p),
-                frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
-                presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
-                logit_bias=shield_overrides.get("logit_bias", {}),
-                stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                stream=False,
-            )
-            
-            if hasattr(response, 'choices') and len(response.choices) > 0:
-                reply = response.choices[0].message.content
-            else:
-                reply = str(response)
-             
+            # Upstream shield configuration overrides
+            shield_overrides = shield.get_openrouter_payload_overrides()
 
-            reply = re.sub(r'\s*\n\s*', '\n', reply)
-            reply = shield.clean_response(reply)
+            with st.chat_message("assistant"):
+                try:
+                    response = client.chat.completions.create(
+                        model="deepseek/deepseek-chat",
+                        messages=compiled_messages,
+                        temperature=float(st.session_state.temperature),
+                        max_tokens=int(st.session_state.max_tokens),
+                        top_p=float(st.session_state.top_p),
+                        frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
+                        presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
+                        logit_bias=shield_overrides.get("logit_bias", {}),
+                        stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
+                        stream=False,
+                    ) 
+
+                    if hasattr(response, 'choices') and len(response.choices) > 0:
+                        reply = response.choices[0].message.content
+                    else:
+                        reply = str(response)
+
+                    # Light review & correction (preserves organic sentences)
+                    reply = shield.review_and_correct(reply)
             st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
 
             try:
