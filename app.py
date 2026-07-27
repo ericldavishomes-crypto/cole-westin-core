@@ -11,11 +11,12 @@ import datetime
 from sqlalchemy import text, create_engine
 import pandas as pd
 import sleep_cycle
-from cole_shield import ColeMasterRuntimeShield 
-
+from cole_shield import ColeMasterRuntimeShield
+from vision_adapter import render_vision_input_ui
+ 
 # API Keys and Environment Configuration
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "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")
-EL_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+EL_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
 
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded") 
@@ -316,11 +317,19 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
     st.session_state.top_k = st.slider("Top K", 1, 100, int(st.session_state.top_k), 1)
     st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, float(st.session_state.frequency_penalty), 0.10)
     st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, float(st.session_state.presence_penalty), 0.10)
-    st.markdown('</div>', unsafe_allow_html=True) 
+    st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.write("Knowledge vectors and persistent memory module active.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif st.session_state.current_tab.strip() == "Perception Center":
+    st.markdown("### 👁️ Perception Center")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    captured_frame = render_vision_input_ui()
+    st.markdown('</div>', unsafe_allow_html=True) 
 
     collections_map = {
         "core_identity": "Core Identity & Continuity",
