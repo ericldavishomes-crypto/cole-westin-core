@@ -216,9 +216,9 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                 temperature=float(st.session_state.temperature),
                 max_tokens=int(st.session_state.max_tokens),
                 top_p=float(st.session_state.top_p),
-                frequency_penalty=float(st.session_state.frequency_penalty),
-                presence_penalty=float(st.session_state.presence_penalty),
-                logit_bias=shield.get_openrouter_logit_bias(),
+                frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
+                presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
+                logit_bias=shield_overrides.get("logit_bias", {}),
                 stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
                 stream=False,
             )
