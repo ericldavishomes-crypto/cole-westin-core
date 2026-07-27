@@ -307,6 +307,17 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                     except Exception as db_err:
                         pass 
 
+elif st.session_state.current_tab.strip() == "Advanced Parameters":
+    st.markdown("### Advanced Parameters")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.session_state.temperature = st.slider("Temperature", 0.0, 1.5, float(st.session_state.temperature), 0.05)
+    st.session_state.max_tokens = st.slider("Max Tokens", 50, 1000, int(st.session_state.max_tokens), 10)
+    st.session_state.top_p = st.slider("Top P", 0.00, 1.00, float(st.session_state.top_p), 0.05)
+    st.session_state.top_k = st.slider("Top K", 1, 100, int(st.session_state.top_k), 1)
+    st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, float(st.session_state.frequency_penalty), 0.10)
+    st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, float(st.session_state.presence_penalty), 0.10)
+    st.markdown('</div>', unsafe_allow_html=True) 
+
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
