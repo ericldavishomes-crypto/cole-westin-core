@@ -16,7 +16,7 @@ from vision_adapter import render_vision_input_ui
  
 # API Keys and Environment Configuration
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
-EL_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+EL_API_KEY = os.environ.get("217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140")
 os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
 
 st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded") 
