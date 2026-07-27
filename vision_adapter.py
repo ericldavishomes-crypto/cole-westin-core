@@ -1,5 +1,4 @@
 import base64
-import cv2
 import requests
 import streamlit as st
 
@@ -18,26 +17,6 @@ class VisionAdapter:
         """Encodes raw byte stream into base64 string for API payloads."""
         return base64.b64encode(image_bytes).decode('utf-8')
 
-    def capture_frame_from_webcam(self):
-        """
-        Captures a single frame directly from local webcam stream.
-        Returns encoded base64 string or None if frame capture fails.
-        """
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            st.error("Vision Adapter Error: Could not access local camera stream.")
-            return None
-
-        ret, frame = cap.read()
-        cap.release()
-
-        if ret:
-            _, buffer = cv2.imencode('.jpg', frame)
-            return self.encode_image_to_base64(buffer.tobytes())
-        else:
-            st.error("Vision Adapter Error: Frame capture failed.")
-            return None
-
     def analyze_visual_input(self, image_base64: str, prompt: str = "Describe what you see in detail.") -> str:
         """
         Sends base64 encoded image frame along with contextual prompt to Vision API.
@@ -51,7 +30,7 @@ class VisionAdapter:
         }
 
         payload = {
-            "model": "deepseek-chat",  # Configurable for vision-capable models
+            "model": "deepseek-chat",
             "messages": [
                 {
                     "role": "user",
