@@ -210,9 +210,13 @@ if st.session_state.current_tab.strip() == "New Chat":
         # DB Insertion & Auto-Naming Initial Check
         try:
             with db_engine.begin() as db_conn:
+                # Create snippet from user prompt (up to 30 characters)
+                clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
+
+                # Insert session with the actual prompt title instead of static "New Chat"
                 db_conn.execute(
-                    text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"),
-                    {"sid": st.session_state.current_session_id, "title": "New Chat"}
+                    text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT (session_id) DO UPDATE SET title = EXCLUDED.title WHERE chat_sessions.title = 'New Chat';"),
+                    {"sid": st.session_state.current_session_id, "title": clean_snippet}
                 )
                 db_conn.execute(
                     text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
