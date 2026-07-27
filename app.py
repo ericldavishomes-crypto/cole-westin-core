@@ -170,14 +170,18 @@ with col6:
         st.session_state.current_tab = "Administrative Panel"
         st.rerun()
 
-if st.session_state.current_tab.strip() != "New Chat":
-    pass
-else:
+# ---------------------------------------------------------
+# NEW CHAT / MAIN CONVERSATION TAB
+# ---------------------------------------------------------
+if st.session_state.current_tab.strip() == "New Chat":
     if "messages" not in st.session_state or not st.session_state.messages:
         st.session_state.messages = []
         try:
             with db_engine.begin() as conn:
-                db_msgs = conn.execute(text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"), {"sid": st.session_state.current_session_id}).mappings().fetchall()
+                db_msgs = conn.execute(
+                    text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"),
+                    {"sid": st.session_state.current_session_id}
+                ).mappings().fetchall()
                 
                 if db_msgs:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
@@ -186,132 +190,124 @@ else:
                 else:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
         except Exception as e:
-            st.session_state.messages = [{"role": "system", "content": system_prompt}] 
+            st.session_state.messages = [{"role": "system", "content": system_prompt}]
 
-st.session_state.initial_sidebar_state = "expanded" 
+    st.session_state.initial_sidebar_state = "expanded"
 
-if st.session_state.current_tab.strip() == "New Chat":
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
                 if message["role"] == "assistant":
                     st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
                 else:
-                    st.write(message["content"]) 
+                    st.write(message["content"])
 
-if prompt := st.chat_input("Speak directly to Cole..."):
-            with st.chat_message("user"):
-                st.write(prompt)
-            st.session_state.messages.append({"role": "user", "content": prompt}) 
+    if prompt := st.chat_input("Speak directly to Cole..."):
+        with st.chat_message("user"):
+            st.write(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
+        # DB Insertion & Auto-Naming Initial Check
+        try:
+            with db_engine.begin() as db_conn:
+                db_conn.execute(
+                    text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"),
+                    {"sid": st.session_state.current_session_id, "title": "New Chat"}
+                )
+                db_conn.execute(
+                    text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                    {"sid": st.session_state.current_session_id, "role": "user", "content": prompt}
+                )
+        except Exception as db_err:
+            pass
+
+        compiled_messages = [{"role": "system", "content": system_prompt}] + [
+            {"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"
+        ]
+
+        shield_overrides = shield.get_openrouter_payload_overrides()
+
+        with st.chat_message("assistant"):
             try:
-                with db_engine.begin() as db_conn:
-                    db_conn.execute(
-                        text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"),
-                        {"sid": st.session_state.current_session_id, "title": "New Chat"}
-                    )
-                    db_conn.execute(
-                        text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                        {"sid": st.session_state.current_session_id, "role": "user", "content": prompt}
-                    )
-            except Exception as db_err:
-                pass 
+                response = client.chat.completions.create(
+                    model="deepseek/deepseek-chat",
+                    messages=compiled_messages,
+                    temperature=float(st.session_state.temperature),
+                    max_tokens=int(st.session_state.max_tokens),
+                    top_p=float(st.session_state.top_p),
+                    frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
+                    presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
+                    logit_bias=shield_overrides.get("logit_bias", {}),
+                    stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
+                    stream=False,
+                )
 
-            compiled_messages = [{"role": "system", "content": system_prompt}] + [
-                {"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"
-            ] 
+                if hasattr(response, 'choices') and len(response.choices) > 0:
+                    reply = response.choices[0].message.content
+                else:
+                    reply = str(response)
 
-            # Upstream shield configuration overrides
-            shield_overrides = shield.get_openrouter_payload_overrides()
+                reply = shield.review_and_correct(reply)
+                
+                st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
 
-            with st.chat_message("assistant"):
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+
+                # Save Assistant Reply & Update Title if "New Chat"
                 try:
-                    response = client.chat.completions.create(
-                        model="deepseek/deepseek-chat",
-                        messages=compiled_messages,
-                        temperature=float(st.session_state.temperature),
-                        max_tokens=int(st.session_state.max_tokens),
-                        top_p=float(st.session_state.top_p),
-                        frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
-                        presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
-                        logit_bias=shield_overrides.get("logit_bias", {}),
-                        stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                        stream=False,
-                    ) 
+                    with db_engine.begin() as db_conn:
+                        db_conn.execute(
+                            text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                            {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                        )
 
-                    if hasattr(response, 'choices') and len(response.choices) > 0:
-                        reply = response.choices[0].message.content
-                    else:
-                        reply = str(response)
+                        current_title_check = db_conn.execute(
+                            text("SELECT title FROM chat_sessions WHERE session_id = :sid;"),
+                            {"sid": st.session_state.current_session_id}
+                        ).mappings().fetchone()
 
-                    # Light review & correction (preserves organic sentences)
-                    reply = shield.review_and_correct(reply)
-                    
-                    st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
-
-                    # Save assistant response to DB
-                    try:
-                        with db_engine.begin() as db_conn:
+                        if current_title_check and current_title_check["title"] == "New Chat":
+                            clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
                             db_conn.execute(
-                                text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                                {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                                text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"),
+                                {"title": clean_snippet, "sid": st.session_state.current_session_id}
                             )
-                    except Exception as db_err:
-                        pass
+                except Exception as db_err:
+                    pass
 
-                    # ElevenLabs Voice Generation
-                    try:
-                        if reply and reply != "System connection issue observed.":
-                            headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                            payload = {
-                                "text": reply,
-                                "model_id": "eleven_turbo_v2_5",
-                                "voice_settings": {
-                                    "stability": 0.65,
-                                    "similarity_boost": 0.85,
-                                    "style": 0.00,
-                                    "use_speaker_boost": True
-                                }
+                # ElevenLabs Voice Generation
+                try:
+                    if reply and reply != "System connection issue observed.":
+                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                        payload = {
+                            "text": reply,
+                            "model_id": "eleven_turbo_v2_5",
+                            "voice_settings": {
+                                "stability": 0.65,
+                                "similarity_boost": 0.85,
+                                "style": 0.00,
+                                "use_speaker_boost": True
                             }
-                            url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
-                            audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True) 
+                        }
+                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
 
-                            if audio_response.status_code == 200:
-                                b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                                st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
-                                st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
-                            else:
-                                st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
-                    except Exception as tts_err:
-                        st.error(f"Voice Stream Pause: {tts_err}")
+                        if audio_response.status_code == 200:
+                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                            st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
+                            st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
+                        else:
+                            st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
+                except Exception as tts_err:
+                    st.error(f"Voice Stream Pause: {tts_err}")
 
-                except Exception as e:
-                    reply = "System connection issue observed."
-                    st.error(f"Core operational exception caught: {e}") 
+            except Exception as e:
+                reply = "System connection issue observed."
+                st.error(f"Core operational exception caught: {e}")
 
-                    st.session_state.messages.append({"role": "assistant", "content": reply}) 
-
-                    try:
-                        with db_engine.begin() as db_conn:
-                            db_conn.execute(
-                                text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                                {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
-                            ) 
-
-                            current_title_check = db_conn.execute(
-                                text("SELECT title FROM chat_sessions WHERE session_id = :sid;"),
-                                {"sid": st.session_state.current_session_id}
-                            ).mappings().fetchone()
-
-                            if current_title_check and current_title_check["title"] == "New Chat":
-                                clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
-                                db_conn.execute(
-                                    text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"),
-                                    {"title": clean_snippet, "sid": st.session_state.current_session_id}
-                                )
-                    except Exception as db_err:
-                        pass 
-
+# ---------------------------------------------------------
+# ADVANCED PARAMETERS TAB
+# ---------------------------------------------------------
 elif st.session_state.current_tab.strip() == "Advanced Parameters":
     st.markdown("### Advanced Parameters")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
@@ -323,45 +319,31 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
     st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, float(st.session_state.presence_penalty), 0.10)
     st.markdown('</div>', unsafe_allow_html=True)
 
+# ---------------------------------------------------------
+# KNOWLEDGE TAB (Restored Vault & Vector Collections)
+# ---------------------------------------------------------
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    try:
-        with db_engine.begin() as conn:
-            docs = conn.execute(text("SELECT document_name, created_at FROM knowledge_docs ORDER BY created_at DESC;")).mappings().fetchall()
-            if docs:
-                for doc in docs:
-                    st.write(f"📄 **{doc['document_name']}** — *{doc['created_at']}*")
-            else:
-                st.info("No active knowledge vectors found in database.")
-    except Exception as k_err:
-        st.write("Knowledge Base Active.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-elif st.session_state.current_tab.strip() == "Perception Center":
-    st.markdown("### 👁️ Perception Center")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    captured_frame = render_vision_input_ui()
-    st.markdown('</div>', unsafe_allow_html=True) 
-
+    
     collections_map = {
         "core_identity": "Core Identity & Continuity",
         "cognitive_scaffolding": "Cole Cognitive Scaffolding System",
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
         "embodiment_deployment": "Embodiment & Deployment"
-    } 
+    }
 
     try:
         st.success("Knowledge Connection Active")
-        st.markdown("---") 
+        st.markdown("---")
 
         for q_name, clean_name in collections_map.items():
             try:
                 col_desc = q_client.get_collection(collection_name=q_name)
                 vector_count = col_desc.points_count
             except Exception:
-                vector_count = 0 
+                vector_count = 0
 
             with st.container(key=f"vault_row_{q_name}"):
                 col_a, col_b = st.columns((3, 1))
@@ -369,15 +351,36 @@ elif st.session_state.current_tab.strip() == "Perception Center":
                     st.write(f"{clean_name}")
                 with col_b:
                     st.code(f"{vector_count} Layers Loaded")
-            st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True) 
+            st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
 
     except Exception as q_err:
         st.error("🔒 Vector Sync Standby Mode: Waiting for active credentials pipeline.")
-        st.caption(f"Status Note: {q_err}") 
+        st.caption(f"Status Note: {q_err}")
 
-    st.markdown('</div>', unsafe_allow_html=True) 
+    try:
+        with db_engine.begin() as conn:
+            docs = conn.execute(text("SELECT document_name, created_at FROM knowledge_docs ORDER BY created_at DESC;")).mappings().fetchall()
+            if docs:
+                for doc in docs:
+                    st.write(f"📄 **{doc['document_name']}** — *{doc['created_at']}*")
+    except Exception as k_err:
+        pass
 
-elif st.session_state.current_tab == "Archived Chats":
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# PERCEPTION CENTER TAB (Clean Camera Input)
+# ---------------------------------------------------------
+elif st.session_state.current_tab.strip() == "Perception Center":
+    st.markdown("### 👁️ Perception Center")
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    captured_frame = render_vision_input_ui()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# ARCHIVED CHATS TAB
+# ---------------------------------------------------------
+elif st.session_state.current_tab.strip() == "Archived Chats":
     st.markdown("### Archived Chats")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     try:
@@ -388,7 +391,7 @@ elif st.session_state.current_tab == "Archived Chats":
             st.markdown("No archived conversation records found in PostgreSQL database ledger.")
     except Exception as e:
         st.markdown("🔒 Timeline logging index paused on active live standby mode.")
-    st.markdown('</div>', unsafe_allow_html=True) 
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("### Database Thread Manager")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
@@ -398,23 +401,23 @@ elif st.session_state.current_tab == "Archived Chats":
             for _, row in action_df.iterrows():
                 date_str = str(row['created_at'])[:16]
                 title_str = row['title']
-                sess_id = row['session_id'] 
+                sess_id = row['session_id']
 
                 col_info, col_action = st.columns((4, 1))
                 with col_info:
-                    st.write(f" {date_str} {title_str}") 
+                    st.write(f" {date_str} {title_str}")
 
                 with col_action:
                     if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
                         if st.session_state.current_session_id == sess_id:
                             st.session_state.current_session_id = None
-                            st.session_state.messages = [] 
+                            st.session_state.messages = []
 
                         try:
                             with db_engine.begin() as del_conn:
                                 del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
                         except Exception as del_err:
-                            pass 
+                            pass
 
                         st.rerun()
                 st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.3;'>", unsafe_allow_html=True)
@@ -422,9 +425,12 @@ elif st.session_state.current_tab == "Archived Chats":
             st.markdown("No active database threads found.")
     except Exception as e:
         pass
-    st.markdown('</div>', unsafe_allow_html=True) 
+    st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.current_tab == "Administrative Panel":
+# ---------------------------------------------------------
+# ADMINISTRATIVE PANEL TAB
+# ---------------------------------------------------------
+elif st.session_state.current_tab.strip() == "Administrative Panel":
     st.markdown("### Administrative Panel")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     st.markdown("Total Registered Profiles: Users 2")
