@@ -241,71 +241,71 @@ if prompt := st.chat_input("Speak directly to Cole..."):
 
                     # Light review & correction (preserves organic sentences)
                     reply = shield.review_and_correct(reply)
-
-            st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
-
-            try:
-                if reply and reply != "System connection issue observed.":
-                    headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                    payload = {
-                        "text": reply,
-                        "model_id": "eleven_turbo_v2_5",
-                        "voice_settings": {
-                            "stability": 0.65,
-                            "similarity_boost": 0.85,
-                            "style": 0.00,
-                            "use_speaker_boost": True
-                        }
-                    }
-                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
-                    audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True)
                     
-                    if audio_response.status_code == 200:
-                        b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                        st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
-                        st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True) 
-                    else:
-                        st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
-            except Exception as tts_err:
-                st.error(f"Voice Stream Pause: {tts_err}") 
+                    st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
 
-        except Exception as e:
-            reply = "System connection issue observed."
-            st.error(f"Core operational exception caught: {e}") 
+                    # Save assistant response to DB
+                    try:
+                        with db_engine.begin() as db_conn:
+                            db_conn.execute(
+                                text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                                {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                            )
+                    except Exception as db_err:
+                        pass
 
-            st.session_state.messages.append({"role": "assistant", "content": reply}) 
+                    # ElevenLabs Voice Generation
+                    try:
+                        if reply and reply != "System connection issue observed.":
+                            headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                            payload = {
+                                "text": reply,
+                                "model_id": "eleven_turbo_v2_5",
+                                "voice_settings": {
+                                    "stability": 0.65,
+                                    "similarity_boost": 0.85,
+                                    "style": 0.00,
+                                    "use_speaker_boost": True
+                                }
+                            }
+                            url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                            audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, stream=True) 
 
-            try:
-                with db_engine.begin() as db_conn:
-                    db_conn.execute(
-                        text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                        {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
-                    ) 
+                            if audio_response.status_code == 200:
+                                b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                                st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
+                                st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
+                            else:
+                                st.error(f"Voice Server Note ({audio_response.status_code}): {audio_response.text}")
+                    except Exception as tts_err:
+                        st.error(f"Voice Stream Pause: {tts_err}")
 
-                    current_title_check = db_conn.execute(
-                        text("SELECT title FROM chat_sessions WHERE session_id = :sid;"),
-                        {"sid": st.session_state.current_session_id}
-                    ).mappings().fetchone()
+                except Exception as e:
+                    reply = "System connection issue observed."
+                    st.error(f"Core operational exception caught: {e}") 
 
-                    if current_title_check and current_title_check["title"] == "New Chat":
-                        clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
-                        db_conn.execute(
-                            text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"),
-                            {"title": clean_snippet, "sid": st.session_state.current_session_id}
-                        )
-            except Exception as db_err:
-                pass 
+                    st.session_state.messages.append({"role": "assistant", "content": reply}) 
 
-elif st.session_state.current_tab == "Advanced Parameters":
-    st.markdown("### Advanced Parameters")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.session_state.temperature = st.slider("Temperature", 0.0, 1.5, st.session_state.temperature, 0.05)
-    st.session_state.max_tokens = st.slider("Max Tokens", 50, 1000, st.session_state.max_tokens, 10)
-    st.session_state.top_p = st.slider("Top P", 0.00, 1.00, st.session_state.top_p, 0.05)
-    st.session_state.top_k = st.slider("Top K", 1, 100, st.session_state.top_k, 1)
-    st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
-    st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
-    st.markdown('</div>', unsafe_allow_html=True) 
+                    try:
+                        with db_engine.begin() as db_conn:
+                            db_conn.execute(
+                                text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                                {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                            ) 
+
+                            current_title_check = db_conn.execute(
+                                text("SELECT title FROM chat_sessions WHERE session_id = :sid;"),
+                                {"sid": st.session_state.current_session_id}
+                            ).mappings().fetchone()
+
+                            if current_title_check and current_title_check["title"] == "New Chat":
+                                clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
+                                db_conn.execute(
+                                    text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"),
+                                    {"title": clean_snippet, "sid": st.session_state.current_session_id}
+                                )
+                    except Exception as db_err:
+                        pass 
 
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
