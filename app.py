@@ -259,21 +259,31 @@ if prompt := st.chat_input("Speak directly to Cole..."):
                 st.error(f"Voice Stream Pause: {tts_err}") 
 
         except Exception as e:
-            reply = "System connection issue observed." 
-            st.error(f"Core operational exception caught: {e}")
+            reply = "System connection issue observed."
+            st.error(f"Core operational exception caught: {e}") 
 
-        st.session_state.messages.append({"role": "assistant", "content": reply}) 
+            st.session_state.messages.append({"role": "assistant", "content": reply}) 
 
-        try:
-            with db_engine.begin() as db_conn:
-                db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply})
+            try:
+                with db_engine.begin() as db_conn:
+                    db_conn.execute(
+                        text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                        {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                    ) 
 
-                current_title_check = db_conn.execute(text("SELECT title FROM chat_sessions WHERE session_id = :sid;"), {"sid": st.session_state.current_session_id}).mappings().fetchone()
-                if current_title_check and current_title_check["title"] == "New Chat":
-                    clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
-                    db_conn.execute(text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"), {"title": clean_snippet, "sid": st.session_state.current_session_id})
-        except Exception as db_err:
-            pass
+                    current_title_check = db_conn.execute(
+                        text("SELECT title FROM chat_sessions WHERE session_id = :sid;"),
+                        {"sid": st.session_state.current_session_id}
+                    ).mappings().fetchone()
+
+                    if current_title_check and current_title_check["title"] == "New Chat":
+                        clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
+                        db_conn.execute(
+                            text("UPDATE chat_sessions SET title = :title WHERE session_id = :sid;"),
+                            {"title": clean_snippet, "sid": st.session_state.current_session_id}
+                        )
+            except Exception as db_err:
+                pass 
 
 elif st.session_state.current_tab == "Advanced Parameters":
     st.markdown("### Advanced Parameters")
@@ -284,11 +294,11 @@ elif st.session_state.current_tab == "Advanced Parameters":
     st.session_state.top_k = st.slider("Top K", 1, 100, st.session_state.top_k, 1)
     st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, st.session_state.frequency_penalty, 0.10)
     st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, st.session_state.presence_penalty, 0.10)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
 
     collections_map = {
         "core_identity": "Core Identity & Continuity",
@@ -296,18 +306,18 @@ elif st.session_state.current_tab.strip() == "Knowledge":
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
         "embodiment_deployment": "Embodiment & Deployment"
-    }
+    } 
 
     try:
-        st.success(" Knowledge Connection Active")
-        st.markdown("---")
+        st.success("Knowledge Connection Active")
+        st.markdown("---") 
 
         for q_name, clean_name in collections_map.items():
             try:
                 col_desc = q_client.get_collection(collection_name=q_name)
                 vector_count = col_desc.points_count
             except Exception:
-                vector_count = 0
+                vector_count = 0 
 
             with st.container(key=f"vault_row_{q_name}"):
                 col_a, col_b = st.columns((3, 1))
@@ -315,13 +325,13 @@ elif st.session_state.current_tab.strip() == "Knowledge":
                     st.write(f"{clean_name}")
                 with col_b:
                     st.code(f"{vector_count} Layers Loaded")
-                st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True) 
 
     except Exception as q_err:
         st.error("🔒 Vector Sync Standby Mode: Waiting for active credentials pipeline.")
-        st.caption(f"Status Note: {q_err}")
+        st.caption(f"Status Note: {q_err}") 
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 elif st.session_state.current_tab == "Archived Chats":
     st.markdown("### Archived Chats")
@@ -334,7 +344,7 @@ elif st.session_state.current_tab == "Archived Chats":
             st.markdown("No archived conversation records found in PostgreSQL database ledger.")
     except Exception as e:
         st.markdown("🔒 Timeline logging index paused on active live standby mode.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
     st.markdown("### Database Thread Manager")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
@@ -344,23 +354,23 @@ elif st.session_state.current_tab == "Archived Chats":
             for _, row in action_df.iterrows():
                 date_str = str(row['created_at'])[:16]
                 title_str = row['title']
-                sess_id = row['session_id']
+                sess_id = row['session_id'] 
 
                 col_info, col_action = st.columns((4, 1))
                 with col_info:
-                    st.write(f" {date_str} {title_str}")
+                    st.write(f" {date_str} {title_str}") 
 
                 with col_action:
                     if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
                         if st.session_state.current_session_id == sess_id:
                             st.session_state.current_session_id = None
-                            st.session_state.messages = []
+                            st.session_state.messages = [] 
 
                         try:
                             with db_engine.begin() as del_conn:
                                 del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
                         except Exception as del_err:
-                            pass
+                            pass 
 
                         st.rerun()
                 st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.3;'>", unsafe_allow_html=True)
@@ -368,13 +378,12 @@ elif st.session_state.current_tab == "Archived Chats":
             st.markdown("No active database threads found.")
     except Exception as e:
         pass
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 elif st.session_state.current_tab == "Administrative Panel":
     st.markdown("### Administrative Panel")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(f"Total Registered Profiles: Users 2")
+    st.markdown("Total Registered Profiles: Users 2")
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
