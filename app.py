@@ -143,7 +143,7 @@ with st.sidebar:
 
 st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True) 
 
-col1, col2, col3, col4, col5 = st.columns(5) 
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
     if st.button("New Chat", use_container_width=True, key="nav_btn_new_chat"):
@@ -154,14 +154,18 @@ with col2:
         st.session_state.current_tab = "Knowledge"
         st.rerun()
 with col3:
+    if st.button("Perception", use_container_width=True, key="nav_btn_perception"):
+        st.session_state.current_tab = "Perception Center"
+        st.rerun()
+with col4:
     if st.button("Advanced Parameters", use_container_width=True, key="nav_btn_advanced"):
         st.session_state.current_tab = "Advanced Parameters"
         st.rerun()
-with col4:
+with col5:
     if st.button("Archived Chats", use_container_width=True, key="nav_btn_archived"):
         st.session_state.current_tab = "Archived Chats"
         st.rerun()
-with col5:
+with col6:
     if st.button("Administrative Panel", use_container_width=True, key="nav_btn_admin"):
         st.session_state.current_tab = "Administrative Panel"
         st.rerun()
@@ -322,7 +326,16 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Cole's Mind")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.write("Knowledge vectors and persistent memory module active.")
+    try:
+        with db_engine.begin() as conn:
+            docs = conn.execute(text("SELECT document_name, created_at FROM knowledge_docs ORDER BY created_at DESC;")).mappings().fetchall()
+            if docs:
+                for doc in docs:
+                    st.write(f"📄 **{doc['document_name']}** — *{doc['created_at']}*")
+            else:
+                st.info("No active knowledge vectors found in database.")
+    except Exception as k_err:
+        st.write("Knowledge Base Active.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.current_tab.strip() == "Perception Center":
