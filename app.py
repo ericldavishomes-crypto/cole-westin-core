@@ -14,7 +14,7 @@ import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield 
 
 # TEMPORARY CONFIGURATION: Keys loaded directly for verification
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
 
@@ -195,18 +195,24 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.write(message["content"]) 
 
 if prompt := st.chat_input("Speak directly to Cole..."):
-    with st.chat_message("user"):
-        st.write(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt}) 
+            with st.chat_message("user"):
+                st.write(prompt)
+            st.session_state.messages.append({"role": "user", "content": prompt}) 
 
-    try:
-        with db_engine.begin() as db_conn:
-            db_conn.execute(text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"), {"sid": st.session_state.current_session_id, "title": "New Chat"})
-            db_conn.execute(text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"), {"sid": st.session_state.current_session_id, "role": "user", "content": prompt})
-    except Exception as db_err:
-        pass 
+            try:
+                with db_engine.begin() as db_conn:
+                    db_conn.execute(
+                        text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT DO NOTHING;"),
+                        {"sid": st.session_state.current_session_id, "title": "New Chat"}
+                    )
+                    db_conn.execute(
+                        text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                        {"sid": st.session_state.current_session_id, "role": "user", "content": prompt}
+                    )
+            except Exception as db_err:
+                pass 
 
-    compiled_messages = [{"role": "system", "content": system_prompt}] + [
+            compiled_messages = [{"role": "system", "content": system_prompt}] + [
                 {"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m["role"] != "system"
             ] 
 
@@ -235,6 +241,7 @@ if prompt := st.chat_input("Speak directly to Cole..."):
 
                     # Light review & correction (preserves organic sentences)
                     reply = shield.review_and_correct(reply)
+
             st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
 
             try:
