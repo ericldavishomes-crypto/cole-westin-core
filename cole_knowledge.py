@@ -83,7 +83,7 @@ try:
 except Exception as e:
     st.error(f"Database sync pause: {e}")
 
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 EL_API_KEY = "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140"
 EL_VOICE_ID = "LpYFItSk5m1WFCX8t9Dl"
 
