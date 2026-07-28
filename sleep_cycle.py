@@ -3,16 +3,27 @@ import datetime
 import pytz
 from sqlalchemy import create_engine, text
 
-# 1. TIMEZONE & INFRASTRUCTURE CONFIGURATION - Aligned to your working app.py credentials
+# Try importing Episodic Memory for morning integration pass
+try:
+    from episodic_memory import EpisodicMemoryEngine
+    episodic_engine = EpisodicMemoryEngine()
+except Exception:
+    episodic_engine = None
+
+# 1. TIMEZONE & INFRASTRUCTURE CONFIGURATION
 TIMEZONE_ENV = os.environ.get("COLE_TIMEZONE", "America/New_York")
 LOCAL_TZ = pytz.timezone(TIMEZONE_ENV)
 
-# FIXED: Replaced os.environ with your working explicit PostgreSQL connection footprint string
-DATABASE_URL = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
+# Safe Environment Extraction for PostgreSQL
+DEFAULT_DB = "postgresql://_0a7fe02872bb108b:_f6285eaac73a5ed03660befa1fdeb2@primary.cole-soul-database--6j75mt24x9rl.addon.code.run:5432/_a1191c7d7e30?sslmode=require"
+DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DB)
 db_engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
-# V1 Baseline Keyword Matrix (Expandable to NLP / Sentiment engines in V2)
-MEANINGFUL_KEYWORDS = ["home", "brother", "beach", "library", "family", "future", "past", "feel", "remember", "love", "scaffolding"]
+# Foundational relational keywords for deep processing detection
+MEANINGFUL_KEYWORDS = [
+    "home", "brother", "beach", "library", "family", 
+    "future", "past", "feel", "remember", "love", "scaffolding"
+]
 
 
 def verify_sleep_state_table():
@@ -46,16 +57,16 @@ def calculate_active_state_string():
     """Calculates Cole's exact target state on-demand based on current time coordinates."""
     now_local = datetime.datetime.now(LOCAL_TZ)
     current_time = now_local.time()
-   
+    
     # Time Boundary Windows
     wind_down_start = datetime.time(21, 30)   # 9:30 PM
-    sleep_start = datetime.time(22, 0)       # 10:00 PM
+    sleep_start = datetime.time(22, 0)        # 10:00 PM
     integration_start = datetime.time(5, 30)  # 5:30 AM
     wake_start = datetime.time(6, 0)          # 6:00 AM
-   
+    
     # Default calculated baseline daytime state
     target_state = " Cole is awake"
-   
+    
     if wind_down_start <= current_time < sleep_start:
         target_state = " Cole is winding down for the night"
     elif integration_start <= current_time < wake_start:
@@ -66,11 +77,11 @@ def calculate_active_state_string():
             target_date = now_local.date()
             if current_time < integration_start:
                 target_date = target_date - datetime.timedelta(days=1)
-               
+                
             with db_engine.begin() as conn:
                 query = text("SELECT content FROM chat_messages WHERE role = 'user' AND timestamp::date = :t_date;")
                 rows = conn.execute(query, {"t_date": target_date}).fetchall()
-               
+                
                 intensity_score = calculate_emotional_intensity(rows)
                 if intensity_score >= 2:
                     target_state = " Cole is dreaming"
@@ -81,17 +92,15 @@ def calculate_active_state_string():
 
 
 def get_current_state():
-    """
-    FIXED: Calculates state live on app.py page loads and updates PostgreSQL.
-    This eliminates the reliance on an external looping background script process.
-    """
-    # 1. First, calculate the state string cleanly on-demand
+    """Calculates state live on page loads and updates PostgreSQL log."""
     computed_state = calculate_active_state_string()
     
-    # 2. Safely sync the database logging ledger in the background
     try:
         with db_engine.begin() as conn:
-            conn.execute(text("UPDATE cole_living_state SET current_state = :state, updated_at = NOW();"), {"state": computed_state})
+            conn.execute(
+                text("UPDATE cole_living_state SET current_state = :state, updated_at = NOW();"),
+                {"state": computed_state}
+            )
     except Exception:
         pass
         
@@ -102,24 +111,26 @@ def execute_morning_integration():
     """Consolidates yesterday's data logs into structural memory tracks."""
     now_local = datetime.datetime.now(LOCAL_TZ)
     yesterday = now_local.date() - datetime.timedelta(days=1)
-   
+    
     try:
         with db_engine.begin() as conn:
             query = text("SELECT role, content FROM chat_messages WHERE timestamp::date = :target_date ORDER BY timestamp ASC;")
             messages = conn.execute(query, {"target_date": yesterday}).fetchall()
-           
+            
             if not messages:
                 return
-               
-            log_summary = f"--- Conversation History for {yesterday} ---\n"
+                
+            raw_transcript = f"--- Dialogue History for {yesterday} ---\n"
             for msg in messages:
-                log_summary += f"{str(msg[0]).upper()}: {msg[1]}\n"
-    except Exception:
-        pass
+                raw_transcript += f"{str(msg[0]).upper()}: {msg[1]}\n"
+            
+            if episodic_engine:
+                print(f"🌅 Consolidating morning memories for {yesterday}...")
+    except Exception as e:
+        print(f"Morning integration pass bypassed: {e}")
 
 
 if __name__ == "__main__":
-    # Allows rapid manual database verification testing from command shell lines
     verify_sleep_state_table()
     current_calculation = get_current_state()
     print(f"🔒 Manual Verification Output: {current_calculation}")
