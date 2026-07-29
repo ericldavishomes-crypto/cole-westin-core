@@ -198,7 +198,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.write(message["content"]) 
 
     # --- VISION INPUT ATTACHMENT TRAY ---
-    with st.expander("+ Show Cole something", expanded=False):
+    with st.expander(" Show Cole Something", expanded=False):
         uploaded_img = st.file_uploader("Upload a photo or snapshot", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
         camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
         
