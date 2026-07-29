@@ -247,7 +247,7 @@ if st.session_state.current_tab.strip() == "New Chat":
         # If image present, format final user prompt with multimodal content payload
         selected_model = "deepseek/deepseek-chat"
         if has_image:
-            selected_model = "google/gemini-2.0-flash-001" # Fast, vision-capable model
+            selected_model = "google/gemini-flash-1.5" # Fast, vision-capable model
             multimodal_content = [
                 {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{staged_b64}"}}
