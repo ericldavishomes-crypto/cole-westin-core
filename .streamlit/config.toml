@@ -1,3 +1,11 @@
 [server]
+enableCORS = false
+enableXsrfProtection = false
 enableWebsocketCompression = false
-disconnectedSessionTTL = 300
+disconnectedSessionTTL = 600
+websocketPingInterval = 10
+websocketPingTimeout = 30
+maxMessageSize = 50
+
+[browser]
+gatherUsageStats = false
