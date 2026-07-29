@@ -198,7 +198,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.write(message["content"]) 
 
     # --- VISION INPUT ATTACHMENT TRAY ---
-    with st.expander("  Show Cole Something", expanded=False):
+    with st.expander(" Show Cole Something", expanded=False):
         uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
         camera_img = st.camera_input("Cole's Vision", key="chat_vision_camera")
         
@@ -372,10 +372,10 @@ elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
-# 👁️ PERCEPTION TAB
+# 👁️ PERCEPTION CENTER TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Perception":
-    st.markdown("###   Perception")
+    st.markdown("###  Perception")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     captured_frame = render_vision_input_ui()
     st.markdown('</div>', unsafe_allow_html=True) 
@@ -406,7 +406,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
                 title_str = row['title']
                 sess_id = row['session_id'] 
 
-                col_info, col_action = st.columns((4, 1))
+                col_info, col_action = st.columns((4, 1))Knowledge
                 with col_info:
                     st.write(f" {date_str} {title_str}") 
 
