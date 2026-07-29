@@ -64,7 +64,7 @@ shield = ColeMasterRuntimeShield()
 # SAFEGUARD: Dynamically inherits database credentials
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    st.error("❌ Critical: DATABASE_URL environment variable is missing. Check Northflank environment configs.")
+    st.error("Critical: DATABASE_URL environment variable is missing. Check Northflank environment configs.")
     st.stop() 
 
 @st.cache_resource
@@ -118,7 +118,7 @@ with st.sidebar:
     status = sleep_cycle.get_current_state()
     st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True) 
 
-    if st.button(" New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
+    if st.button("New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = []
         st.session_state.staged_image_b64 = None
@@ -129,7 +129,7 @@ with st.sidebar:
         with db_engine.begin() as conn:
             sessions = conn.execute(text("SELECT session_id, title FROM chat_sessions ORDER BY created_at DESC LIMIT 20;")).mappings().fetchall()
             for s in sessions:
-                if st.button(f" {s['title']}", key=f"sidebar_sid_{s['session_id']}_{st.session_state.current_tab.strip()}", use_container_width=True):
+                if st.button(f"{s['title']}", key=f"sidebar_sid_{s['session_id']}_{st.session_state.current_tab.strip()}", use_container_width=True):
                     st.session_state.current_session_id = s['session_id']
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []
@@ -152,7 +152,7 @@ with col2:
         st.rerun()
 with col3:
     if st.button("Perception", use_container_width=True, key="nav_btn_perception"):
-        st.session_state.current_tab = "Perception Center"
+        st.session_state.current_tab = "Perception"
         st.rerun()
 with col4:
     if st.button("Advanced Parameters", use_container_width=True, key="nav_btn_advanced"):
@@ -168,7 +168,7 @@ with col6:
         st.rerun() 
 
 # =====================================================================
-# 💬 NEW CHAT / MAIN CONVERSATION TAB (WITH VISION)
+# 💬 NEW CHAT / MAIN CONVERSATION TAB
 # =====================================================================
 if st.session_state.current_tab.strip() == "New Chat":
     if "messages" not in st.session_state or not st.session_state.messages:
@@ -198,8 +198,8 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.write(message["content"]) 
 
     # --- VISION INPUT ATTACHMENT TRAY ---
-    with st.expander("📷 Share an image with Cole", expanded=False):
-        uploaded_img = st.file_uploader("Upload a photo or snapshot", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
+    with st.expander("Show Cole Something", expanded=False):
+        uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
         camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
         
         active_img = uploaded_img or camera_img
@@ -334,7 +334,7 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
 # 📚 KNOWLEDGE TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Knowledge":
-    st.markdown("### Cole's Mind")
+    st.markdown("### Knowledge")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
 
     collections_map = {
@@ -367,16 +367,19 @@ elif st.session_state.current_tab.strip() == "Knowledge":
         else:
             st.info("Vector store standby mode active.")
     except Exception as q_err:
-        st.error("🔒 Vector Sync Standby Mode: Waiting for active credentials pipeline.")
+        st.error("Vector Sync Standby Mode: Waiting for active credentials pipeline.")
 
     st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
-# 👁️ PERCEPTION CENTER TAB
+# 👁️ PERCEPTION TAB
 # =====================================================================
-elif st.session_state.current_tab.strip() == "Perception Center":
-    st.markdown("### 👁️ Perception Center")
+elif st.session_state.current_tab.strip() == "Perception":
+    st.markdown("### Perception")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    
+    # Render Vision Adapter content with simplified heading
+    st.markdown("#### Cole's Vision")
     captured_frame = render_vision_input_ui()
     st.markdown('</div>', unsafe_allow_html=True) 
 
@@ -393,7 +396,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
         else:
             st.markdown("No archived conversation records found in PostgreSQL database ledger.")
     except Exception as e:
-        st.markdown("🔒 Timeline logging index paused on active live standby mode.")
+        st.markdown("Timeline logging index paused on active live standby mode.")
     st.markdown('</div>', unsafe_allow_html=True) 
 
     st.markdown("### Database Thread Manager")
