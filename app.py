@@ -334,7 +334,7 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
 # 📚 KNOWLEDGE TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Knowledge":
-    st.markdown("### Knowledge")
+    st.markdown("###  Knowledge")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
 
     collections_map = {
