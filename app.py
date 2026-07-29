@@ -372,7 +372,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
-#  PERCEPTION TAB
+# 👁️ PERCEPTION CENTER TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Perception":
     st.markdown("###  Perception")
