@@ -198,8 +198,8 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.write(message["content"]) 
 
     # --- VISION INPUT ATTACHMENT TRAY ---
-    with st.expander("Show Cole Something", expanded=False):
-        uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
+    with st.expander(" ", expanded=False):
+        uploaded_img = st.file_uploader("Show Cole Something", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
         camera_img = st.camera_input("Cole's Vision", key="chat_vision_camera")
         
         active_img = uploaded_img or camera_img
@@ -372,7 +372,7 @@ elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
-# 👁️ PERCEPTION CENTER TAB
+# 👁️ PERCEPTION TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Perception":
     st.markdown("###  Perception")
