@@ -5,8 +5,6 @@ def render_vision_input_ui():
     """
     Renders a clean vision frame capture input for Cole's perception engine.
     """
-    st.markdown("<h3 style='color: #111111; font-weight: 500; margin-bottom: 15px;'>Cole's Vision</h3>", unsafe_allow_html=True)
-    
     # Live camera input feed
     camera_file = st.camera_input(label="Live Feed", key="perception_camera_feed", label_visibility="collapsed")
     
