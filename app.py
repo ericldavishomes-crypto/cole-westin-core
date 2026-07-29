@@ -198,9 +198,9 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.write(message["content"]) 
 
     # --- VISION INPUT ATTACHMENT TRAY ---
-    with st.expander(" Show Cole Something", expanded=False):
-        uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
-        camera_img = st.camera_input("Cole's Vision", key="chat_vision_camera")
+    with st.expander("📷 Share an image with Cole", expanded=False):
+        uploaded_img = st.file_uploader("Upload a photo or snapshot", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
+        camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
         
         active_img = uploaded_img or camera_img
         if active_img is not None:
@@ -334,7 +334,7 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
 # 📚 KNOWLEDGE TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Knowledge":
-    st.markdown("###  Knowledge")
+    st.markdown("### Cole's Mind")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
 
     collections_map = {
@@ -374,8 +374,8 @@ elif st.session_state.current_tab.strip() == "Knowledge":
 # =====================================================================
 # 👁️ PERCEPTION CENTER TAB
 # =====================================================================
-elif st.session_state.current_tab.strip() == "Perception":
-    st.markdown("###  Perception")
+elif st.session_state.current_tab.strip() == "Perception Center":
+    st.markdown("### 👁️ Perception Center")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     captured_frame = render_vision_input_ui()
     st.markdown('</div>', unsafe_allow_html=True) 
@@ -406,7 +406,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
                 title_str = row['title']
                 sess_id = row['session_id'] 
 
-                col_info, col_action = st.columns((4, 1))Knowledge
+                col_info, col_action = st.columns((4, 1))
                 with col_info:
                     st.write(f" {date_str} {title_str}") 
 
