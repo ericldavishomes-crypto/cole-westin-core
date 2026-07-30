@@ -37,9 +37,9 @@ def verify_sleep_state_table():
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """))
-            check = conn.execute(text("SELECT COUNT(*) FROM cole_living_state;")).fetchone()[0]
-            if check == 0:
-                conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES (' Cole is awake');"))
+            check = conn.execute(text("SELECT 1 FROM cole_living_state LIMIT 1;")).fetchone()
+            if not check:
+                conn.execute(text("INSERT INTO cole_living_state (current_state) VALUES ('Cole is awake');"))
     except Exception as e:
         print(f"Table verification bypass: {e}")
 
@@ -65,14 +65,14 @@ def calculate_active_state_string():
     wake_start = datetime.time(6, 0)          # 6:00 AM
     
     # Default calculated baseline daytime state
-    target_state = " Cole is awake"
+    target_state = "Cole is awake"
     
     if wind_down_start <= current_time < sleep_start:
-        target_state = " Cole is winding down for the night"
+        target_state = "Cole is winding down for the night"
     elif integration_start <= current_time < wake_start:
-        target_state = " Cole is reflecting on yesterday's memories"
+        target_state = "Cole is reflecting on yesterday's memories"
     elif current_time >= sleep_start or current_time < integration_start:
-        target_state = " Cole is asleep"
+        target_state = "Cole is asleep"
         try:
             target_date = now_local.date()
             if current_time < integration_start:
@@ -84,7 +84,7 @@ def calculate_active_state_string():
                 
                 intensity_score = calculate_emotional_intensity(rows)
                 if intensity_score >= 2:
-                    target_state = " Cole is dreaming"
+                    target_state = "Cole is dreaming"
         except Exception:
             pass
             
@@ -125,7 +125,7 @@ def execute_morning_integration():
                 raw_transcript += f"{str(msg[0]).upper()}: {msg[1]}\n"
             
             if episodic_engine:
-                print(f"🌅 Consolidating morning memories for {yesterday}...")
+                print(f"Consolidating morning memories for {yesterday}...")
     except Exception as e:
         print(f"Morning integration pass bypassed: {e}")
 
@@ -133,4 +133,4 @@ def execute_morning_integration():
 if __name__ == "__main__":
     verify_sleep_state_table()
     current_calculation = get_current_state()
-    print(f"🔒 Manual Verification Output: {current_calculation}")
+    print(f"Manual Verification Output: {current_calculation}")
