@@ -212,12 +212,29 @@ if st.session_state.current_tab.strip() == "New Chat":
                 st.rerun()
 
 # =========================================================
-# 1. MAIN SCREEN HISTORY DRAWER (Full history accessible anytime)
+# 1. MAIN SCREEN HISTORY DRAWER (Loads full chat from Database)
 # =========================================================
 with st.expander(" View Full Conversation History", expanded=False):
-    for msg in st.session_state.messages:
-        if msg["role"] != "system":
-            st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
+    try:
+        with db_engine.begin() as db_conn:
+            # Query all messages for the current session ID
+            db_history = db_conn.execute(
+                text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY id ASC"),
+                {"sid": st.session_state.current_session_id}
+            ).fetchall()
+
+            if db_history:
+                for row in db_history:
+                    role, content = row[0], row[1]
+                    if role != "system":
+                        st.markdown(f"**{role.capitalize()}:** {content}")
+            else:
+                st.write("No previous message history found for this session.")
+    except Exception as err:
+        # Fallback to session_state if database query fails
+        for msg in st.session_state.messages:
+            if msg["role"] != "system":
+                st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
 
 # =========================================================
 # 2. ACTIVE SCREEN DISPLAY (Capped visual window to save phone RAM)
