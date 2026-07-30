@@ -189,35 +189,34 @@ if st.session_state.current_tab.strip() == "New Chat":
         except Exception as e:
             st.session_state.messages = [{"role": "system", "content": system_prompt}] 
 
-    for message in st.session_state.messages:
-        if message["role"] != "system":
-            with st.chat_message(message["role"]):
-                if message["role"] == "assistant":
-                    st.markdown(f"<span style='color: #0A192F !important;'>{message['content']}</span>", unsafe_allow_html=True)
-                else:
-                    st.write(message["content"]) 
-
-    # --- VISION INPUT ATTACHMENT TRAY ---
-    with st.expander("Show Cole Something", expanded=False):
-        uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_uploader")
-        camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
-        
-        active_img = uploaded_img or camera_img
-        if active_img is not None:
-            img_bytes = active_img.getvalue()
-            st.session_state.staged_image_b64 = base64.b64encode(img_bytes).decode("utf-8")
-            st.image(active_img, caption="Staged for Cole", width=250)
-            if st.button("Remove Photo", key="clear_staged_img"):
-                st.session_state.staged_image_b64 = None
-                st.rerun()
+# =========================================================
+# 1. ACTIVE CHAT DISPLAY (Renders main message window first)
+# =========================================================
+visible_messages = st.session_state.messages[-15:]
+for message in visible_messages:
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
 # =========================================================
-# 1. MAIN SCREEN HISTORY DRAWER (Loads full chat from Database)
+# 2. TOOL EXPANDERS (Sitting right above the typing area)
 # =========================================================
-with st.expander(" View Full Conversation History", expanded=False):
+with st.expander("Photo", expanded=False):
+    uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_upload")
+    camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
+
+    active_img = uploaded_img or camera_img
+    if active_img is not None:
+        img_bytes = active_img.getvalue()
+        st.session_state.staged_image_b64 = base64.b64encode(img_bytes).decode("utf-8")
+        st.image(active_img, caption="Staged for Cole", width=250)
+        if st.button("Remove Photo", key="clear_staged_img"):
+            st.session_state.staged_image_b64 = None
+            st.rerun()
+
+with st.expander("Full History", expanded=False):
     try:
         with db_engine.begin() as db_conn:
-            # Query all messages for the current session ID
             db_history = db_conn.execute(
                 text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY id ASC"),
                 {"sid": st.session_state.current_session_id}
@@ -227,27 +226,20 @@ with st.expander(" View Full Conversation History", expanded=False):
                 for row in db_history:
                     role, content = row[0], row[1]
                     if role != "system":
-                        st.markdown(f"**{role.capitalize()}:** {content}")
+                        display_name = "Eric" if role == "user" else "Cole"
+                        st.markdown(f"**{display_name}:** {content}")
             else:
                 st.write("No previous message history found for this session.")
     except Exception as err:
-        # Fallback to session_state if database query fails
         for msg in st.session_state.messages:
             if msg["role"] != "system":
-                st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
-
-# =========================================================
-# 2. ACTIVE SCREEN DISPLAY (Capped visual window to save phone RAM)
-# =========================================================
-visible_messages = st.session_state.messages[-15:]
-for message in visible_messages:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+                display_name = "Eric" if msg["role"] == "user" else "Cole"
+                st.markdown(f"**{display_name}:** {msg['content']}")
 
 # =========================================================
 # 3. CHAT INPUT & EXECUTION HANDLER
 # =========================================================
+
 if prompt := st.chat_input("Speak directly to Cole..."):
     # Check if an image is staged
     staged_b64 = st.session_state.staged_image_b64
