@@ -211,110 +211,130 @@ if st.session_state.current_tab.strip() == "New Chat":
                 st.session_state.staged_image_b64 = None
                 st.rerun()
 
-    if prompt := st.chat_input("Speak directly to Cole..."):
-        # Check if an image is staged
-        staged_b64 = st.session_state.staged_image_b64
-        has_image = staged_b64 is not None
+# =========================================================
+# 1. SIDEBAR HISTORY DRAWER (Full history accessible anytime)
+# =========================================================
+with st.sidebar.expander("📜 Full Conversation History", expanded=False):
+    for msg in st.session_state.messages:
+        if msg["role"] != "system":
+            st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
 
-        with st.chat_message("user"):
-            if has_image:
-                st.image(base64.b64decode(staged_b64), width=300)
-            st.write(prompt)
+# =========================================================
+# 2. ACTIVE SCREEN DISPLAY (Capped visual window to save phone RAM)
+# =========================================================
+visible_messages = st.session_state.messages[-15:]
+for message in visible_messages:
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
-        # Store user text in local message array
-        st.session_state.messages.append({"role": "user", "content": prompt}) 
+# =========================================================
+# 3. CHAT INPUT & EXECUTION HANDLER
+# =========================================================
+if prompt := st.chat_input("Speak directly to Cole..."):
+    # Check if an image is staged
+    staged_b64 = st.session_state.staged_image_b64
+    has_image = staged_b64 is not None
 
-        # Save User Message to PostgreSQL
-        try:
-            with db_engine.begin() as db_conn:
-                clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt 
-                db_conn.execute(
-                    text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT (session_id) DO UPDATE SET title = EXCLUDED.title WHERE chat_sessions.title = 'New Chat';"),
-                    {"sid": st.session_state.current_session_id, "title": clean_snippet}
-                )
-                db_conn.execute(
-                    text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                    {"sid": st.session_state.current_session_id, "role": "user", "content": prompt if not has_image else f"[Photo Attached] {prompt}"}
-                )
-        except Exception as db_err:
-            pass 
-
-        # Build message history for OpenRouter
-        conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
-        recent_history = conversation_history[-15:]  
-        compiled_messages = [{"role": "system", "content": system_prompt}] + recent_history
-
-        # If image present, format final user prompt with multimodal content payload
-        selected_model = "deepseek/deepseek-chat"
+    with st.chat_message("user"):
         if has_image:
-            selected_model = "openai/gpt-4o-mini" # Fast, vision-capable model
-            multimodal_content = [
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{staged_b64}"}}
-            ]
-            compiled_messages[-1] = {"role": "user", "content": multimodal_content}
+            st.image(base64.b64decode(staged_b64), width=300)
+        st.write(prompt)
 
-        shield_overrides = shield.get_openrouter_payload_overrides() 
+    # Store user text in local message array
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-        with st.chat_message("assistant"):
+    # Save User Message to PostgreSQL
+    try:
+        with db_engine.begin() as db_conn:
+            clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
+            db_conn.execute(
+                text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT (session_id) DO UPDATE SET title = EXCLUDED.title WHERE chat_sessions.title = 'New Chat';"),
+                {"sid": st.session_state.current_session_id, "title": clean_snippet}
+            )
+            db_conn.execute(
+                text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                {"sid": st.session_state.current_session_id, "role": "user", "content": prompt if not has_image else f"[Photo Attached] {prompt}"}
+            )
+    except Exception as db_err:
+        pass
+
+    # Build message history for OpenRouter
+    conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
+    recent_history = conversation_history[-15:]  
+    compiled_messages = [{"role": "system", "content": system_prompt}] + recent_history
+
+    # Model Selection & Vision Payload Handling
+    selected_model = "deepseek/deepseek-chat"
+    if has_image:
+        selected_model = "openai/gpt-4o-mini" # Fast, vision-capable model
+        multimodal_content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{staged_b64}"}}
+        ]
+        compiled_messages[-1] = {"role": "user", "content": multimodal_content}
+
+    shield_overrides = shield.get_openrouter_payload_overrides()
+
+    with st.chat_message("assistant"):
+        try:
+            response = client.chat.completions.create(
+                model=selected_model,
+                messages=compiled_messages,
+                temperature=float(st.session_state.temperature),
+                max_tokens=int(st.session_state.max_tokens),
+                top_p=float(st.session_state.top_p),
+                frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
+                presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
+                logit_bias=shield_overrides.get("logit_bias", {}),
+                stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
+                stream=False,
+            )
+
+            if hasattr(response, 'choices') and len(response.choices) > 0:
+                reply = response.choices[0].message.content
+            else:
+                reply = str(response)
+
+            reply = shield.review_and_correct(reply)
+            st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+
+            # Clear image staged state after generation
+            st.session_state.staged_image_b64 = None
+
+            # Save Assistant Reply to PostgreSQL
             try:
-                response = client.chat.completions.create(
-                    model=selected_model,
-                    messages=compiled_messages,
-                    temperature=float(st.session_state.temperature),
-                    max_tokens=int(st.session_state.max_tokens),
-                    top_p=float(st.session_state.top_p),
-                    frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
-                    presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
-                    logit_bias=shield_overrides.get("logit_bias", {}),
-                    stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                    stream=False,
-                ) 
+                with db_engine.begin() as db_conn:
+                    db_conn.execute(
+                        text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                        {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                    )
+            except Exception as db_err:
+                pass
 
-                if hasattr(response, 'choices') and len(response.choices) > 0:
-                    reply = response.choices[0].message.content
-                else:
-                    reply = str(response) 
-
-                reply = shield.review_and_correct(reply) 
-                st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True) 
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-
-                # Clear image staged state after successful generation
-                st.session_state.staged_image_b64 = None
-
-                # Save Assistant Reply to PostgreSQL
+            # ElevenLabs Voice Generation with Lightweight Storage
+            if EL_API_KEY and reply and reply != "System connection issue observed.":
                 try:
-                    with db_engine.begin() as db_conn:
-                        db_conn.execute(
-                            text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                            {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
-                        )
-                except Exception as db_err:
+                    headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                    payload = {
+                        "text": reply,
+                        "model_id": "eleven_turbo_v2_5",
+                        "voice_settings": {"stability": 0.65, "similarity_boost": 0.85, "style": 0.00, "use_speaker_boost": True}
+                    }
+                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                    audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, timeout=8.0)
+
+                    if audio_response.status_code == 200:
+                        b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                        # Embed audio player dynamically without persisting heavy base64 strings in perpetual memory
+                        st.markdown(f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>", unsafe_allow_html=True)
+                except Exception:
                     pass
 
-                # Optional ElevenLabs Voice Stream
-                if EL_API_KEY and reply and reply != "System connection issue observed.":
-                    try:
-                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                        payload = {
-                            "text": reply,
-                            "model_id": "eleven_turbo_v2_5",
-                            "voice_settings": {"stability": 0.65, "similarity_boost": 0.85, "style": 0.00, "use_speaker_boost": True}
-                        }
-                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
-                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, timeout=8.0) 
-
-                        if audio_response.status_code == 200:
-                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                            st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>"
-                            st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
-                    except Exception:
-                        pass # Fails quietly to prevent Streamlit rerun loops
-
-            except Exception as e:
-                reply = "System connection issue observed."
-                st.error(f"Core operational exception caught: {e}") 
+        except Exception as e:
+            reply = "System connection issue observed."
+            st.error(f"Core operational exception caught: {e}") 
 
 # =====================================================================
 # ⚙️ ADVANCED PARAMETERS TAB
@@ -443,3 +463,6 @@ elif st.session_state.current_tab.strip() == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+
+
