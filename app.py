@@ -201,7 +201,7 @@ for message in visible_messages:
 # =========================================================
 # 2. TOOL EXPANDERS (Sitting right above the typing area)
 # =========================================================
-with st.expander("Photo", expanded=False):
+with st.expander("Show Cole Something", expanded=False):
     uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_upload")
     camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
 
