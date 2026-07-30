@@ -214,7 +214,7 @@ if st.session_state.current_tab.strip() == "New Chat":
 # =========================================================
 # 1. MAIN SCREEN HISTORY DRAWER (Full history accessible anytime)
 # =========================================================
-with st.expander("📜 View Full Conversation History", expanded=False):
+with st.expander(" View Full Conversation History", expanded=False):
     for msg in st.session_state.messages:
         if msg["role"] != "system":
             st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
