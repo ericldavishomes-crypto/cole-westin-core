@@ -212,9 +212,9 @@ if st.session_state.current_tab.strip() == "New Chat":
                 st.rerun()
 
 # =========================================================
-# 1. SIDEBAR HISTORY DRAWER (Full history accessible anytime)
+# 1. MAIN SCREEN HISTORY DRAWER (Full history accessible anytime)
 # =========================================================
-with st.sidebar.expander("📜 Full Conversation History", expanded=False):
+with st.expander("📜 View Full Conversation History", expanded=False):
     for msg in st.session_state.messages:
         if msg["role"] != "system":
             st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
@@ -463,6 +463,3 @@ elif st.session_state.current_tab.strip() == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
-
-
