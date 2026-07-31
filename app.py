@@ -12,7 +12,9 @@ from sqlalchemy import text, create_engine
 import pandas as pd
 import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield
-from vision_adapter import render_vision_input_ui 
+from vision_adapter import render_vision_input_ui
+from cole_core import get_cole_system_payload
+from memory_engine import recall_memories, store_memory 
 
 # =====================================================================
 # ⚙️ API KEYS AND ENVIRONMENT CONFIGURATION
@@ -271,7 +273,12 @@ if prompt := st.chat_input("Speak directly to Cole..."):
     # Build message history for OpenRouter
     conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
     recent_history = conversation_history[-15:]  
-    compiled_messages = [{"role": "system", "content": system_prompt}] + recent_history
+    # Recall relevant memories & build Cole's identity payload
+    retrieved_mems = recall_memories(prompt, limit=3)
+    system_payload = get_cole_system_payload(user_input=prompt, retrieved_memories=retrieved_mems)
+
+    compiled_messages = [system_payload] + recent_history
+
 
     # Model Selection & Vision Payload Handling
     selected_model = "deepseek/deepseek-chat"
