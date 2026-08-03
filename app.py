@@ -123,6 +123,7 @@ with st.sidebar:
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = []
         st.session_state.staged_image_b64 = None
+        st.session_state.latest_audio_html = None
         st.session_state.current_tab = "New Chat"
         st.rerun()
 
@@ -135,6 +136,7 @@ with st.sidebar:
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []
                     st.session_state.staged_image_b64 = None
+                    st.session_state.latest_audio_html = None
                     st.rerun()
     except Exception as e:
         st.text("History tracking offline...")
@@ -192,6 +194,10 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
         except Exception as e:
             st.session_state.messages = [{"role": "system", "content": system_prompt}]
+
+    # Dedicated Persistent Audio Slot at the top of chat
+    if st.session_state.latest_audio_html:
+        st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
 
     visible_messages = st.session_state.messages[-15:]
     for message in visible_messages:
@@ -326,7 +332,8 @@ if st.session_state.current_tab.strip() == "New Chat":
 
                         if audio_response.status_code == 200:
                             b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                            st.markdown(f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>", unsafe_allow_html=True)
+                            st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-bottom: 15px;'></audio>"
+                            st.rerun()
                     except Exception:
                         pass
 
@@ -434,6 +441,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
                         if st.session_state.current_session_id == sess_id:
                             st.session_state.current_session_id = None
                             st.session_state.messages = []
+                            st.session_state.latest_audio_html = None
 
                         try:
                             with db_engine.begin() as del_conn:
@@ -459,3 +467,4 @@ elif st.session_state.current_tab.strip() == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
