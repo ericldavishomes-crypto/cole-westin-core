@@ -63,7 +63,6 @@ if "staged_image_b64" not in st.session_state: st.session_state.staged_image_b64
 
 shield = ColeMasterRuntimeShield()
 
-# Dynamically inherits database credentials
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     st.error("Critical: DATABASE_URL environment variable is missing. Check Northflank environment configs.")
@@ -141,35 +140,36 @@ with st.sidebar:
         st.text("History tracking offline...")
 
 # =====================================================================
-# 🎛️ TOP NAVIGATION BAR (Optimized to eliminate full reruns where possible)
+# 🎛️ TOP NAVIGATION BAR
 # =====================================================================
 st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-def set_tab(tab_name):
-    if st.session_state.current_tab != tab_name:
-        st.session_state.current_tab = tab_name
-        st.rerun()
-
 with col1:
     if st.button("New Chat", use_container_width=True, key="nav_btn_new_chat"):
-        set_tab("New Chat")
+        st.session_state.current_tab = "New Chat"
+        st.rerun()
 with col2:
     if st.button("Knowledge", use_container_width=True, key="nav_btn_knowledge"):
-        set_tab("Knowledge")
+        st.session_state.current_tab = "Knowledge"
+        st.rerun()
 with col3:
     if st.button("Perception", use_container_width=True, key="nav_btn_perception"):
-        set_tab("Perception")
+        st.session_state.current_tab = "Perception"
+        st.rerun()
 with col4:
     if st.button("Advanced Parameters", use_container_width=True, key="nav_btn_advanced"):
-        set_tab("Advanced Parameters")
+        st.session_state.current_tab = "Advanced Parameters"
+        st.rerun()
 with col5:
     if st.button("Archived Chats", use_container_width=True, key="nav_btn_archived"):
-        set_tab("Archived Chats")
+        st.session_state.current_tab = "Archived Chats"
+        st.rerun()
 with col6:
     if st.button("Administrative Panel", use_container_width=True, key="nav_btn_admin"):
-        set_tab("Administrative Panel")
+        st.session_state.current_tab = "Administrative Panel"
+        st.rerun()
 
 # =====================================================================
 # 💬 NEW CHAT / MAIN CONVERSATION TAB
@@ -193,18 +193,12 @@ if st.session_state.current_tab.strip() == "New Chat":
         except Exception as e:
             st.session_state.messages = [{"role": "system", "content": system_prompt}]
 
-    # =========================================================
-    # 1. ACTIVE CHAT DISPLAY (Renders main message window first)
-    # =========================================================
     visible_messages = st.session_state.messages[-15:]
     for message in visible_messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
                 st.write(message["content"])
 
-    # =========================================================
-    # 2. TOOL EXPANDERS (Sitting right above the typing area)
-    # =========================================================
     with st.expander("Add Image", expanded=False):
         uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_upload")
         camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
@@ -240,9 +234,6 @@ if st.session_state.current_tab.strip() == "New Chat":
                     display_name = "Eric" if msg["role"] == "user" else "Cole"
                     st.markdown(f"{display_name}: {msg['content']}")
 
-    # =========================================================
-    # 3. CHAT INPUT & EXECUTION HANDLER
-    # =========================================================
     if prompt := st.chat_input("Speak directly to Cole..."):
         staged_b64 = st.session_state.staged_image_b64
         has_image = staged_b64 is not None
