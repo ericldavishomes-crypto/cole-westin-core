@@ -3,9 +3,9 @@ enableCORS = false
 enableXsrfProtection = false
 enableWebsocketCompression = false
 disconnectedSessionTTL = 600
-websocketPingInterval = 20
-websocketPingTimeout = 10
-maxMessageSize = 200
+websocketPingInterval = 10
+websocketPingTimeout = 30
+maxMessageSize = 50
 
 [browser]
 gatherUsageStats = false
