@@ -20,7 +20,7 @@ from memory_engine import recall_memories, store_memory
 # ⚙️ API KEYS AND ENVIRONMENT CONFIGURATION
 # =====================================================================
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-EL_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140")
+EL_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_4e15bcc191dc5a32ecbc41aefe057ca670430135399c37ff")
 EL_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "LpYFItSk5m1WFCX8t9Dl")
 
 os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
