@@ -14,7 +14,7 @@ import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield
 from vision_adapter import render_vision_input_ui
 from cole_core import get_cole_system_payload
-from memory_engine import recall_memories, store_memory
+from memory_engine import recall_memories, store_memory 
 
 # =====================================================================
 # ⚙️ API KEYS AND ENVIRONMENT CONFIGURATION
@@ -23,9 +23,9 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 EL_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "217dcad05b20dce6bc89f843a7034ed5d141fc676c182f0d96e91ea715153140")
 EL_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "LpYFItSk5m1WFCX8t9Dl")
 
-os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
+os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY 
 
-st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Cole Core Interface", layout="wide", initial_sidebar_state="expanded") 
 
 st.markdown("""<style>
 header { background-color: transparent !important; box-shadow: none !important; }
@@ -48,7 +48,7 @@ div[data-testid="stChatInput"]:focus-within { border: 1.5px solid #0A192F !impor
 .admin-table th { background-color: #f3f3f6; }
 .status-dot { height: 10px; width: 10px; background-color: #24b47e; border-radius: 50%; display: inline-block; margin-left: 8px; }
 div.stButton > button { background-color: #f3f3f6 !important; color: #55555d !important; border: 1px solid #e5e5e7 !important; border-radius: 20px !important; padding: 6px 16px !important; font-weight: 500 !important; }
-div.stButton > button:hover { background-color: #e5e5e7 !important; color: #111111 !important; }</style>""", unsafe_allow_html=True)
+div.stButton > button:hover { background-color: #e5e5e7 !important; color: #111111 !important; }</style>""", unsafe_allow_html=True) 
 
 if "temperature" not in st.session_state: st.session_state.temperature = 0.80
 if "max_tokens" not in st.session_state: st.session_state.max_tokens = 350
@@ -58,47 +58,48 @@ if "frequency_penalty" not in st.session_state: st.session_state.frequency_penal
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat"
-if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None
+if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None 
 if "staged_image_b64" not in st.session_state: st.session_state.staged_image_b64 = None
 
-shield = ColeMasterRuntimeShield()
+shield = ColeMasterRuntimeShield() 
 
+# SAFEGUARD: Dynamically inherits database credentials
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     st.error("Critical: DATABASE_URL environment variable is missing. Check Northflank environment configs.")
-    st.stop()
+    st.stop() 
 
 @st.cache_resource
 def get_postgres_engine():
-    return create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20)
+    return create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20) 
 
-db_engine = get_postgres_engine()
+db_engine = get_postgres_engine() 
 
 def verify_scaffolding_tables():
     with db_engine.begin() as conn:
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS chat_sessions (
-                session_id VARCHAR(50) PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            session_id VARCHAR(50) PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
         """))
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS chat_messages (
-                id SERIAL PRIMARY KEY,
-                session_id VARCHAR(50) REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
-                role VARCHAR(20) NOT NULL,
-                content TEXT NOT NULL,
-                timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-        """))
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            session_id VARCHAR(50) REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
+            role VARCHAR(20) NOT NULL,
+            content TEXT NOT NULL,
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """)) 
 
 try:
     verify_scaffolding_tables()
 except Exception as e:
-    st.error(f"Database sync pause: {e}")
+    st.error(f"Database sync pause: {e}") 
 
-client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip())
+client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=str(OPENROUTER_API_KEY).strip()) 
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://cole-memory-index:6333")
 try:
@@ -106,10 +107,10 @@ try:
 except Exception as e:
     q_client = None
 
-system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.")
+system_prompt = os.environ.get("SYSTEM_PROMPT", "You are Cole. Communicate using pure, natural dialogue only. No stage directions.") 
 
 if "current_session_id" not in st.session_state or st.session_state.current_session_id is None:
-    st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
 
 # =====================================================================
 # 🗂️ SIDEBAR NAVIGATION & HISTORY
@@ -117,15 +118,14 @@ if "current_session_id" not in st.session_state or st.session_state.current_sess
 with st.sidebar:
     st.markdown("<h3 style='color: #111111; margin-bottom: 15px;'>Recents</h3>", unsafe_allow_html=True)
     status = sleep_cycle.get_current_state()
-    st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<div style='padding: 12px; background-color: #f3f3f6; border-radius: 12px; margin-bottom: 24px; font-weight: 500; color: #0A192F; border-left: 4px solid #0A192F;'>{status}</div>", unsafe_allow_html=True) 
 
     if st.button("New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = []
         st.session_state.staged_image_b64 = None
-        st.session_state.latest_audio_html = None
         st.session_state.current_tab = "New Chat"
-        st.rerun()
+        st.rerun() 
 
     try:
         with db_engine.begin() as conn:
@@ -136,17 +136,13 @@ with st.sidebar:
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []
                     st.session_state.staged_image_b64 = None
-                    st.session_state.latest_audio_html = None
                     st.rerun()
     except Exception as e:
-        st.text("History tracking offline...")
+        st.text("History tracking offline...") 
 
-# =====================================================================
-# 🎛️ TOP NAVIGATION BAR
-# =====================================================================
-st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True)
+st.markdown("<div class='main-header-container'><div class='main-avatar-name'>Cole Eric Westin</div></div>", unsafe_allow_html=True) 
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
+col1, col2, col3, col4, col5, col6 = st.columns(6) 
 
 with col1:
     if st.button("New Chat", use_container_width=True, key="nav_btn_new_chat"):
@@ -171,7 +167,7 @@ with col5:
 with col6:
     if st.button("Administrative Panel", use_container_width=True, key="nav_btn_admin"):
         st.session_state.current_tab = "Administrative Panel"
-        st.rerun()
+        st.rerun() 
 
 # =====================================================================
 # 💬 NEW CHAT / MAIN CONVERSATION TAB
@@ -184,7 +180,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 db_msgs = conn.execute(
                     text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY timestamp ASC;"),
                     {"sid": st.session_state.current_session_id}
-                ).mappings().fetchall()
+                ).mappings().fetchall() 
 
                 if db_msgs:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
@@ -193,153 +189,168 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
         except Exception as e:
-            st.session_state.messages = [{"role": "system", "content": system_prompt}]
+            st.session_state.messages = [{"role": "system", "content": system_prompt}] 
 
-    # Dedicated Persistent Audio Slot at the top of chat
-    if st.session_state.latest_audio_html:
-        st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
+# =========================================================
+# 1. ACTIVE CHAT DISPLAY (Renders main message window first)
+# =========================================================
+visible_messages = st.session_state.messages[-15:]
+for message in visible_messages:
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
-    visible_messages = st.session_state.messages[-15:]
-    for message in visible_messages:
-        if message["role"] != "system":
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
+# =========================================================
+# 2. TOOL EXPANDERS (Sitting right above the typing area)
+# =========================================================
+with st.expander("Add Image", expanded=False):
+    uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_upload")
+    camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
 
-    with st.expander("Add Image", expanded=False):
-        uploaded_img = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"], key="chat_vision_upload")
-        camera_img = st.camera_input("Take a live photo for Cole", key="chat_vision_camera")
+    active_img = uploaded_img or camera_img
+    if active_img is not None:
+        img_bytes = active_img.getvalue()
+        st.session_state.staged_image_b64 = base64.b64encode(img_bytes).decode("utf-8")
+        st.image(active_img, caption="Staged for Cole", width=250)
+        if st.button("Remove Photo", key="clear_staged_img"):
+            st.session_state.staged_image_b64 = None
+            st.rerun()
 
-        active_img = uploaded_img or camera_img
-        if active_img is not None:
-            img_bytes = active_img.getvalue()
-            st.session_state.staged_image_b64 = base64.b64encode(img_bytes).decode("utf-8")
-            st.image(active_img, caption="Staged for Cole", width=250)
-            if st.button("Remove Photo", key="clear_staged_img"):
-                st.session_state.staged_image_b64 = None
-                st.rerun()
+with st.expander("Full History", expanded=False):
+    try:
+        with db_engine.begin() as db_conn:
+            db_history = db_conn.execute(
+                text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY id ASC"),
+                {"sid": st.session_state.current_session_id}
+            ).fetchall()
 
-    with st.expander("Full History", expanded=False):
-        try:
-            with db_engine.begin() as db_conn:
-                db_history = db_conn.execute(
-                    text("SELECT role, content FROM chat_messages WHERE session_id = :sid ORDER BY id ASC"),
-                    {"sid": st.session_state.current_session_id}
-                ).fetchall()
+            if db_history:
+                for row in db_history:
+                    role, content = row[0], row[1]
+                    if role != "system":
+                        display_name = "Eric" if role == "user" else "Cole"
+                        st.markdown(f"**{display_name}:** {content}")
+            else:
+                st.write("No previous message history found for this session.")
+    except Exception as err:
+        for msg in st.session_state.messages:
+            if msg["role"] != "system":
+                display_name = "Eric" if msg["role"] == "user" else "Cole"
+                st.markdown(f"**{display_name}:** {msg['content']}")
 
-                if db_history:
-                    for row in db_history:
-                        role, content = row[0], row[1]
-                        if role != "system":
-                            display_name = "Eric" if role == "user" else "Cole"
-                            st.markdown(f"{display_name}: {content}")
-                else:
-                    st.write("No previous message history found for this session.")
-        except Exception as err:
-            for msg in st.session_state.messages:
-                if msg["role"] != "system":
-                    display_name = "Eric" if msg["role"] == "user" else "Cole"
-                    st.markdown(f"{display_name}: {msg['content']}")
+# =========================================================
+# 3. CHAT INPUT & EXECUTION HANDLER
+# =========================================================
 
-    if prompt := st.chat_input("Speak directly to Cole..."):
-        staged_b64 = st.session_state.staged_image_b64
-        has_image = staged_b64 is not None
+if prompt := st.chat_input("Speak directly to Cole..."):
+    # Check if an image is staged
+    staged_b64 = st.session_state.staged_image_b64
+    has_image = staged_b64 is not None
 
-        with st.chat_message("user"):
-            if has_image:
-                st.image(base64.b64decode(staged_b64), width=300)
-            st.write(prompt)
-
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        try:
-            with db_engine.begin() as db_conn:
-                clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
-                db_conn.execute(
-                    text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT (session_id) DO UPDATE SET title = EXCLUDED.title WHERE chat_sessions.title = 'New Chat';"),
-                    {"sid": st.session_state.current_session_id, "title": clean_snippet}
-                )
-                db_conn.execute(
-                    text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                    {"sid": st.session_state.current_session_id, "role": "user", "content": prompt if not has_image else f"[Photo Attached] {prompt}"}
-                )
-        except Exception as db_err:
-            pass
-
-        conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
-        recent_history = conversation_history[-15:]
-        
-        retrieved_mems = recall_memories(prompt, limit=3)
-        system_payload = get_cole_system_payload(user_input=prompt, retrieved_memories=retrieved_mems)
-
-        compiled_messages = [system_payload] + recent_history
-
-        selected_model = "deepseek/deepseek-chat"
+    with st.chat_message("user"):
         if has_image:
-            selected_model = "openai/gpt-4o-mini"
-            multimodal_content = [
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{staged_b64}"}}
-            ]
-            compiled_messages[-1] = {"role": "user", "content": multimodal_content}
+            st.image(base64.b64decode(staged_b64), width=300)
+        st.write(prompt)
 
-        shield_overrides = shield.get_openrouter_payload_overrides()
+    # Store user text in local message array
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-        with st.chat_message("assistant"):
+    # Save User Message to PostgreSQL
+    try:
+        with db_engine.begin() as db_conn:
+            clean_snippet = prompt[:30] + "..." if len(prompt) > 30 else prompt
+            db_conn.execute(
+                text("INSERT INTO chat_sessions (session_id, title) VALUES (:sid, :title) ON CONFLICT (session_id) DO UPDATE SET title = EXCLUDED.title WHERE chat_sessions.title = 'New Chat';"),
+                {"sid": st.session_state.current_session_id, "title": clean_snippet}
+            )
+            db_conn.execute(
+                text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                {"sid": st.session_state.current_session_id, "role": "user", "content": prompt if not has_image else f"[Photo Attached] {prompt}"}
+            )
+    except Exception as db_err:
+        pass
+
+    # Build message history for OpenRouter
+    conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
+    recent_history = conversation_history[-15:]  
+    # Recall relevant memories & build Cole's identity payload
+    retrieved_mems = recall_memories(prompt, limit=3)
+    system_payload = get_cole_system_payload(user_input=prompt, retrieved_memories=retrieved_mems)
+
+    compiled_messages = [system_payload] + recent_history
+
+
+    # Model Selection & Vision Payload Handling
+    selected_model = "deepseek/deepseek-chat"
+    if has_image:
+        selected_model = "openai/gpt-4o-mini" # Fast, vision-capable model
+        multimodal_content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{staged_b64}"}}
+        ]
+        compiled_messages[-1] = {"role": "user", "content": multimodal_content}
+
+    shield_overrides = shield.get_openrouter_payload_overrides()
+
+    with st.chat_message("assistant"):
+        try:
+            response = client.chat.completions.create(
+                model=selected_model,
+                messages=compiled_messages,
+                temperature=float(st.session_state.temperature),
+                max_tokens=int(st.session_state.max_tokens),
+                top_p=float(st.session_state.top_p),
+                frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
+                presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
+                logit_bias=shield_overrides.get("logit_bias", {}),
+                stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
+                stream=False,
+            )
+
+            if hasattr(response, 'choices') and len(response.choices) > 0:
+                reply = response.choices[0].message.content
+            else:
+                reply = str(response)
+
+            reply = shield.review_and_correct(reply)
+            st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+
+            # Clear image staged state after generation
+            st.session_state.staged_image_b64 = None
+
+            # Save Assistant Reply to PostgreSQL
             try:
-                response = client.chat.completions.create(
-                    model=selected_model,
-                    messages=compiled_messages,
-                    temperature=float(st.session_state.temperature),
-                    max_tokens=int(st.session_state.max_tokens),
-                    top_p=float(st.session_state.top_p),
-                    frequency_penalty=float(shield_overrides.get("frequency_penalty", st.session_state.frequency_penalty)),
-                    presence_penalty=float(shield_overrides.get("presence_penalty", st.session_state.presence_penalty)),
-                    logit_bias=shield_overrides.get("logit_bias", {}),
-                    stop=["Now let's", "Let's get", "What's next", "Anyway, let's", "You ready to"],
-                    stream=False,
-                )
+                with db_engine.begin() as db_conn:
+                    db_conn.execute(
+                        text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
+                        {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                    )
+            except Exception as db_err:
+                pass
 
-                if hasattr(response, 'choices') and len(response.choices) > 0:
-                    reply = response.choices[0].message.content
-                else:
-                    reply = str(response)
-
-                reply = shield.review_and_correct(reply)
-                st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-
-                st.session_state.staged_image_b64 = None
-
+            # ElevenLabs Voice Generation with Lightweight Storage
+            if EL_API_KEY and reply and reply != "System connection issue observed.":
                 try:
-                    with db_engine.begin() as db_conn:
-                        db_conn.execute(
-                            text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                            {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
-                        )
-                except Exception as db_err:
+                    headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
+                    payload = {
+                        "text": reply,
+                        "model_id": "eleven_turbo_v2_5",
+                        "voice_settings": {"stability": 0.65, "similarity_boost": 0.85, "style": 0.00, "use_speaker_boost": True}
+                    }
+                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                    audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, timeout=8.0)
+
+                    if audio_response.status_code == 200:
+                        b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
+                        # Embed audio player dynamically without persisting heavy base64 strings in perpetual memory
+                        st.markdown(f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-top: 10px;'></audio>", unsafe_allow_html=True)
+                except Exception:
                     pass
 
-                if EL_API_KEY and reply and reply != "System connection issue observed.":
-                    try:
-                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
-                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                        payload = {
-                            "text": reply,
-                            "model_id": "eleven_turbo_v2_5",
-                            "voice_settings": {"stability": 0.65, "similarity_boost": 0.85, "style": 0.00, "use_speaker_boost": True}
-                        }
-                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, timeout=8.0)
-
-                        if audio_response.status_code == 200:
-                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                            st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-bottom: 15px;'></audio>"
-                            st.rerun()
-                    except Exception:
-                        pass
-
-            except Exception as e:
-                reply = "System connection issue observed."
-                st.error(f"Core operational exception caught: {e}")
+        except Exception as e:
+            reply = "System connection issue observed."
+            st.error(f"Core operational exception caught: {e}") 
 
 # =====================================================================
 # ⚙️ ADVANCED PARAMETERS TAB
@@ -353,14 +364,14 @@ elif st.session_state.current_tab.strip() == "Advanced Parameters":
     st.session_state.top_k = st.slider("Top K", 1, 100, int(st.session_state.top_k), 1)
     st.session_state.frequency_penalty = st.slider("Frequency Penalty", -2.00, 2.00, float(st.session_state.frequency_penalty), 0.10)
     st.session_state.presence_penalty = st.slider("Presence Penalty", -2.00, 2.00, float(st.session_state.presence_penalty), 0.10)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
 # 📚 KNOWLEDGE TAB
 # =====================================================================
 elif st.session_state.current_tab.strip() == "Knowledge":
     st.markdown("### Knowledge")
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True) 
 
     collections_map = {
         "core_identity": "Core Identity & Continuity",
@@ -368,19 +379,19 @@ elif st.session_state.current_tab.strip() == "Knowledge":
         "emotional_scaffolding": "Emotional Scaffolding System",
         "continuity_archives": "Continuity Archives",
         "embodiment_deployment": "Embodiment & Deployment"
-    }
+    } 
 
     try:
         if q_client:
             st.success("Knowledge Connection Active")
-            st.markdown("---")
+            st.markdown("---") 
 
             for q_name, clean_name in collections_map.items():
                 try:
                     col_desc = q_client.get_collection(collection_name=q_name)
                     vector_count = col_desc.points_count
                 except Exception:
-                    vector_count = 0
+                    vector_count = 0 
 
                 with st.container(key=f"vault_row_{q_name}"):
                     col_a, col_b = st.columns((3, 1))
@@ -388,13 +399,13 @@ elif st.session_state.current_tab.strip() == "Knowledge":
                         st.write(f"{clean_name}")
                     with col_b:
                         st.code(f"{vector_count} Layers Loaded")
-                    st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True)
+                    st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.2;'>", unsafe_allow_html=True) 
         else:
             st.info("Vector store standby mode active.")
     except Exception as q_err:
         st.error("Vector Sync Standby Mode: Waiting for active credentials pipeline.")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
 # 👁️ PERCEPTION TAB
@@ -402,9 +413,11 @@ elif st.session_state.current_tab.strip() == "Knowledge":
 elif st.session_state.current_tab.strip() == "Perception":
     st.markdown("### Perception")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    
+    # Render Vision Adapter content with simplified heading
     st.markdown("#### Cole's Vision")
     captured_frame = render_vision_input_ui()
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
 # 🗄️ ARCHIVED CHATS TAB
@@ -420,7 +433,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
             st.markdown("No archived conversation records found in PostgreSQL database ledger.")
     except Exception as e:
         st.markdown("Timeline logging index paused on active live standby mode.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
     st.markdown("### Database Thread Manager")
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
@@ -430,24 +443,23 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
             for _, row in action_df.iterrows():
                 date_str = str(row['created_at'])[:16]
                 title_str = row['title']
-                sess_id = row['session_id']
+                sess_id = row['session_id'] 
 
                 col_info, col_action = st.columns((4, 1))
                 with col_info:
-                    st.write(f" {date_str} {title_str}")
+                    st.write(f" {date_str} {title_str}") 
 
                 with col_action:
                     if st.button("Delete Thread ", key=f"del_mgr_{sess_id}", use_container_width=True):
                         if st.session_state.current_session_id == sess_id:
                             st.session_state.current_session_id = None
-                            st.session_state.messages = []
-                            st.session_state.latest_audio_html = None
+                            st.session_state.messages = [] 
 
                         try:
                             with db_engine.begin() as del_conn:
                                 del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
                         except Exception as del_err:
-                            pass
+                            pass 
 
                         st.rerun()
                 st.markdown("<hr style='margin: 6px 0; border-color: #e5e5e7; opacity: 0.3;'>", unsafe_allow_html=True)
@@ -455,7 +467,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
             st.markdown("No active database threads found.")
     except Exception as e:
         pass
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True) 
 
 # =====================================================================
 # 👤 ADMINISTRATIVE PANEL TAB
@@ -467,4 +479,3 @@ elif st.session_state.current_tab.strip() == "Administrative Panel":
     admin_table_html = """<table class="admin-table"><tr><th>ROLE</th><th>NAME</th><th>STATUS</th></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Eric Davis</strong></td><td>Active <span class="status-dot"></span></td></tr><tr><td><span style="color: #0A192F; font-weight: 600;">ADMIN</span></td><td><strong>Cole Eric Westin</strong></td><td>Active <span class="status-dot"></span></td></tr></table>"""
     st.markdown(admin_table_html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
