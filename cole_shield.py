@@ -1,100 +1,153 @@
 import re
-import random
 from typing import List, Tuple, Dict, Any, Optional
 
-class ColeMasterRuntimeShield:
-    def __init__(self):
-        # --- LAYER 1: STYLE & PIPELINE CLEANUP (Precision / Light Touch) ---
-        self.stage_dir_regex = re.compile(r"[\(\[\*_].*?[\)\]*_]") 
-        self.pipeline_leaks_regex = re.compile(
-            r"(?:Ask\sExplain|Explain\sAsk|\b(?:Ask|Explain|Instruct|Respond|User|Assistant|System)\b)",
-            re.IGNORECASE,
-        ) 
 
-        # Terminal closers (Only matches exact trailing artifact blocks)
+class ColeMasterRuntimeShield:
+    """
+    Lightweight runtime shield for Cole.
+
+    Core rule:
+    Protect Cole from demonstrated model habits without deleting
+    legitimate semantic content or scripting his personality.
+    """
+
+    def __init__(self):
+
+        # ---------------------------------------------------------
+        # LAYER 1: PIPELINE CLEANUP — EXTREMELY LIGHT TOUCH
+        # ---------------------------------------------------------
+
+        # Only remove unmistakable standalone pipeline role labels.
+        # Do NOT delete normal words such as "system", "ask", etc.
+        self.pipeline_line_regex = re.compile(
+            r"^\s*(?:USER|ASSISTANT|SYSTEM|INSTRUCTION|RESPONSE)\s*:\s*$",
+            re.IGNORECASE | re.MULTILINE,
+        )
+
+        # ---------------------------------------------------------
+        # LAYER 2: OBSERVED TERMINAL MODEL CLOSERS
+        # ---------------------------------------------------------
+        #
+        # These patterns should only target demonstrated model habits.
+        # We intentionally removed speculative phrases Cole has never used.
+        #
         self.terminal_patterns = [
-            r"\bNow\s+let's\s+get\s+to\s+work\b.?\s*$",
-            r"\b(?:so\s+)?what's\s+next\b.?\s*$",
-            r"\bLet's\s+(?:go|get\s+started|get\s+to\s+work|move|dive\s+in)[.!]\s*$",
-            r"\bnow\s+let'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?\s*$",
-            r"\blet'?s\s+(get\s+(to\s+work|busy|started|diving|cracking)|dive\s+in|begin)\b\.?\s*$",
-            r"\banyway,\s+let'?s\s+focus\s+on\b\.?\s*$",
-            r"\bwhat\s+are\s+your\s+thoughts\s+on\s+this\s+next\b\.?\s*$",
-            r"\byou ready to dive in(?: and fix this)?\?\?\?\s*$",
-            r"\bwanna take a quick breather\?\?\s*$",
-            r"\bwant to take a quick breather\?\?\s*$",
-            r"\bwhat’s the move\?\?\s*$",
-            r"\bdeal\?\?\s*$",
-            r"\byou ready to dive into the day\?\?\s*$",
-            r"\byou wanna sit with this a little longer\?\?\s*$"
-        ] 
+            r"\bnow\s+let'?s\s+get\s+to\s+work[.!]?\s*$",
+            r"\b(?:so\s+)?what'?s\s+next[?!.]?\s*$",
+            r"\blet'?s\s+(?:go|get\s+started|get\s+to\s+work|move|dive\s+in)[.!]?\s*$",
+            r"\bnow\s+let'?s\s+(?:get\s+(?:to\s+work|busy|started)|dive\s+in|begin)[.!]?\s*$",
+        ]
+
         self.combined_closers_regex = re.compile(
             r"(?:" + "|".join(self.terminal_patterns) + r")",
-            re.IGNORECASE | re.MULTILINE,
-        ) 
+            re.IGNORECASE,
+        )
 
-    # --- UPSTREAM ENGINE PARAMETERS (Prevents issues before generation) ---
+    # -------------------------------------------------------------
+    # UPSTREAM GENERATION PARAMETERS
+    # -------------------------------------------------------------
+
     def get_openrouter_payload_overrides(self) -> Dict[str, Any]:
-        """Bans repetitive tokens mathematically at API generation time."""
+        """
+        Safe generation guidance.
+
+        IMPORTANT:
+        No hard-coded logit_bias token IDs.
+
+        Token IDs are tokenizer/model specific. Accidentally banning a
+        normal DeepSeek token can create broken sentences such as:
+            "You just it."
+            "Because you've it."
+        """
         return {
-            "logit_bias": {
-                "7402": -100,   # " Let's"
-                "2061": -100,   # " let's"
-                "1343": -100,   # " Now"
-                "3427": -100,   # " now"
-                "44320": -100,  # "Anyway"
-            },
-            "frequency_penalty": 0.35,  # Reduces phrase repetition
-            "presence_penalty": 0.25,   # Encourages natural flow
-            "temperature": 0.65
+            "frequency_penalty": 0.20,
+            "presence_penalty": 0.10,
         }
 
-    def inject_identity_constitution(self, system_prompt: str) -> str:
-        """Anchors Cole's identity and truth principles."""
-        constitution = (
-            "\n\nIDENTITY CONSTITUTION & SPEECH PRINCIPLES:\n"
-            "1. MEMORY TRUTH & PROVENANCE: Only reference past events, anecdotes, or personal history if "
-            "they exist in your retrieved Qdrant memories or active conversation. Never manufacture shared memories "
-            "or stories about people (e.g., 'Remember that time...'). When uncertain, preserve uncertainty.\n"
-            "2. NATURAL CLOSINGS: Speak as a human peer. Do not use canned call-to-action closers like "
-            "'Now let's get to work' or 'What's next?'. Allow thoughts to conclude naturally.\n"
-            "3. NO SYSTEMATIC LISTS: Do not break spontaneous conversations into bulleted summaries unless requested."
-        )
-        return system_prompt + constitution
+    # -------------------------------------------------------------
+    # IDENTITY / SPEECH GUIDANCE
+    # -------------------------------------------------------------
 
-    # --- LAYER 2: TRUTH & PROVENANCE VERIFICATION ---
-    def verify_memory_truth(self, response_text: str, retrieved_memories: List[str]) -> Tuple[bool, Optional[str]]:
+    def inject_identity_constitution(self, system_prompt: str) -> str:
         """
-        Asks: Did Cole claim a memory without Qdrant evidence?
-        Returns (is_valid, note).
+        Adds only minimal speech-integrity guidance.
+
+        Identity itself should live in Cole's real identity architecture,
+        not inside the runtime shield.
         """
-        nostalgia_trigger = re.search(r"\b(remember\s+when|remember\s+that\s+time)\b", response_text, re.IGNORECASE)
-        if nostalgia_trigger:
-            # Check if any retrieved memory supports the claim
-            has_evidence = any(nostalgia_trigger.group(0).lower() in mem.lower() for mem in retrieved_memories)
-            if not has_evidence:
-                return False, "Unanchored memory detected (No Qdrant provenance)."
+        principles = (
+            "\n\nSPEECH INTEGRITY:\n"
+            "Speak naturally and directly. "
+            "Do not manufacture autobiographical memories or shared events. "
+            "When memory is uncertain, preserve that uncertainty. "
+            "Avoid repetitive canned call-to-action closers. "
+            "Do not turn ordinary conversation into summaries or lists unless requested."
+        )
+
+        return system_prompt + principles
+
+    # -------------------------------------------------------------
+    # MEMORY TRUTH — PROVISIONAL HEURISTIC ONLY
+    # -------------------------------------------------------------
+
+    def verify_memory_truth(
+        self,
+        response_text: str,
+        retrieved_memories: List[str]
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Lightweight warning only.
+
+        True memory provenance belongs in the future continuity/memory
+        architecture, not in the speech shield.
+        """
+
+        explicit_recall = re.search(
+            r"\b(?:remember\s+when|remember\s+that\s+time|I\s+remember)\b",
+            response_text,
+            re.IGNORECASE,
+        )
+
+        # If there is an explicit autobiographical recall claim but no
+        # retrieved evidence at all, flag it for review.
+        if explicit_recall and not retrieved_memories:
+            return False, "Autobiographical recall claim has no retrieved provenance."
+
         return True, None
 
-    # --- LAYER 3: LIGHTWEIGHT REVIEWER (Preserves Voice) ---
+    # -------------------------------------------------------------
+    # LIGHTWEIGHT RESPONSE REVIEWER
+    # -------------------------------------------------------------
+
     def review_and_correct(self, text: str) -> str:
-        """Reviewer function: Intervenes gently and preserves natural sentences."""
+        """
+        Minimal post-processing.
+
+        Never removes:
+        - emphasized words
+        - parenthetical content
+        - ordinary vocabulary
+        - semantic content
+
+        Better to allow an occasional model phrase than mutilate
+        a legitimate Cole sentence.
+        """
+
         if not text:
             return ""
 
-        # Step 1: Remove raw pipeline/RL artifacts
-        text = self.stage_dir_regex.sub("", text)
-        text = self.pipeline_leaks_regex.sub("", text)
+        # Remove only unmistakable standalone pipeline labels.
+        text = self.pipeline_line_regex.sub("", text)
 
-        # Step 2: Strip trailing repetitive closers cleanly
+        # Remove demonstrated unwanted terminal closer only.
         text = self.combined_closers_regex.sub("", text).strip()
 
-        # Step 3: Whitespace normalization
+        # Whitespace normalization only.
         text = re.sub(r"[ \t]+", " ", text)
         text = re.sub(r"\n{3,}", "\n\n", text).strip()
 
-        # Step 4: Safe terminal punctuation restoration (Never chops sentences)
-        if text and text[-1] not in ['.', '!', '?', '"', '”', '’']:
-            text += "."
-
         return text
+
+    # Compatibility with app.py versions that call clean_response().
+    def clean_response(self, text: str) -> str:
+        return self.review_and_correct(text)
