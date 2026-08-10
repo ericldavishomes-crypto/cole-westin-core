@@ -58,7 +58,6 @@ if "frequency_penalty" not in st.session_state: st.session_state.frequency_penal
 if "presence_penalty" not in st.session_state: st.session_state.presence_penalty = 0.00
 if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 if "current_tab" not in st.session_state: st.session_state.current_tab = "New Chat"
-if "latest_audio_html" not in st.session_state: st.session_state.latest_audio_html = None
 if "staged_image_b64" not in st.session_state: st.session_state.staged_image_b64 = None
 
 shield = ColeMasterRuntimeShield()
@@ -122,8 +121,7 @@ with st.sidebar:
     if st.button("New Chat", use_container_width=True, key=f"sidebar_new_chat_trigger_{st.session_state.current_session_id}"):
         st.session_state.current_session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = []
-        st.session_state.staged_image_b64 = None
-        st.session_state.latest_audio_html = None
+        st.session_state.staged_image_f = None
         st.session_state.current_tab = "New Chat"
         st.rerun()
 
@@ -136,7 +134,6 @@ with st.sidebar:
                     st.session_state.current_tab = "New Chat"
                     st.session_state.messages = []
                     st.session_state.staged_image_b64 = None
-                    st.session_state.latest_audio_html = None
                     st.rerun()
     except Exception as e:
         st.text("History tracking offline...")
@@ -194,10 +191,6 @@ if st.session_state.current_tab.strip() == "New Chat":
                     st.session_state.messages = [{"role": "system", "content": system_prompt}]
         except Exception as e:
             st.session_state.messages = [{"role": "system", "content": system_prompt}]
-
-    # Dedicated Persistent Audio Slot at the top of chat
-    if st.session_state.latest_audio_html:
-        st.markdown(st.session_state.latest_audio_html, unsafe_allow_html=True)
 
     visible_messages = st.session_state.messages[-15:]
     for message in visible_messages:
@@ -304,7 +297,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     reply = str(response)
 
-                reply = shield.review_and_correct(reply)
+                reply = shield.review_and_correct(reply)if
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
 
@@ -320,26 +313,54 @@ if st.session_state.current_tab.strip() == "New Chat":
                     pass
 
                 if EL_API_KEY and reply and reply != "System connection issue observed.":
-                    try:
-                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
-                        headers = {"xi-api-key": EL_API_KEY, "Content-Type": "application/json"}
-                        payload = {
-                            "text": reply,
-                            "model_id": "eleven_turbo_v2_5",
-                            "voice_settings": {"stability": 0.65, "similarity_boost": 0.85, "style": 0.00, "use_speaker_boost": True}
+                try:
+                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+
+                    headers = {
+                        "xi-api-key": EL_API_KEY,
+                        "Content-Type": "application/json"
+                    }
+
+                    payload = {
+                        "text": reply,
+                        "model_id": "eleven_turbo_v2_5",
+                        "voice_settings": {
+                            "stability": 0.65,
+                            "similarity_boost": 0.85,
+                            "style": 0.00,
+                            "use_speaker_boost": True
                         }
-                        audio_response = requests.post(url, json=payload, headers=headers, params={"output_format": "mp3_44100_192"}, timeout=8.0)
+                    }
 
-                        if audio_response.status_code == 200:
-                            b64_audio = base64.b64encode(audio_response.content).decode("utf-8")
-                            st.session_state.latest_audio_html = f"<audio src='data:audio/mp3;base64,{b64_audio}' controls autoplay style='width: 100%; margin-bottom: 15px;'></audio>"
-                            st.rerun()
-                    except Exception:
-                        pass
+                    audio_response = requests.post(
+                        url,
+                        json=payload,
+                        headers=headers,
+                        params={"output_format": "mp3_44100_192"},
+                        timeout=(10, 60)
+                    )
 
-            except Exception as e:
-                reply = "System connection issue observed."
-                st.error(f"Core operational exception caught: {e}")
+                    if audio_response.status_code == 200:
+                        st.audio(
+                            audio_response.content,
+                            format="audio/mpeg",
+                            autoplay=True
+                        )
+                    else:
+                        st.error(
+                            f"Voice Server Note ({audio_response.status_code}): "
+                            f"{audio_response.text}"
+                        )
+
+                except requests.Timeout:
+                    st.error("Voice request timed out.")
+
+                except Exception as tts_err:
+                    st.error(f"Voice Stream Pause: {tts_err}")
+
+        except Exception as e:
+            reply = "System connection issue observed."
+            st.error(f"Core operational exception caught: {e}")
 
 # =====================================================================
 # ⚙️ ADVANCED PARAMETERS TAB
@@ -441,8 +462,7 @@ elif st.session_state.current_tab.strip() == "Archived Chats":
                         if st.session_state.current_session_id == sess_id:
                             st.session_state.current_session_id = None
                             st.session_state.messages = []
-                            st.session_state.latest_audio_html = None
-
+                           
                         try:
                             with db_engine.begin() as del_conn:
                                 del_conn.execute(text("DELETE FROM chat_sessions WHERE session_id = :sid;"), {"sid": sess_id})
