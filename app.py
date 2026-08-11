@@ -300,7 +300,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     reply = str(response)
 
-                reply = shield.review_and_correct(reply)if
+                reply = shield.review_and_correct(reply)
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
 
