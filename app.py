@@ -14,7 +14,7 @@ import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield
 from vision_adapter import render_vision_input_ui
 from cole_core import get_cole_system_payload
-from memory_engine import recall_memories, store_memory
+import cole_knowledge
 
 # =====================================================================
 # ⚙️ API KEYS AND ENVIRONMENT CONFIGURATION
@@ -261,7 +261,10 @@ if st.session_state.current_tab.strip() == "New Chat":
         conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
         recent_history = conversation_history[-15:]
         
-        retrieved_mems = recall_memories(prompt, limit=3)
+        retrieved_mems = cole_knowledge.fetch_cole_memories(
+           user_prompt=prompt,
+           top_k=6,
+        )
         system_payload = get_cole_system_payload(user_input=prompt, retrieved_memories=retrieved_mems)
 
         compiled_messages = [system_payload] + recent_history
