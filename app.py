@@ -316,50 +316,50 @@ if st.session_state.current_tab.strip() == "New Chat":
                     pass
 
                 if EL_API_KEY and reply and reply != "System connection issue observed.":
-                try:
-                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+        try:
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
 
-                    headers = {
-                        "xi-api-key": EL_API_KEY,
-                        "Content-Type": "application/json"
-                    }
+        headers = {
+            "xi-api-key": EL_API_KEY,
+            "Content-Type": "application/json"
+        }
 
-                    payload = {
-                        "text": reply,
-                        "model_id": "eleven_turbo_v2_5",
-                        "voice_settings": {
-                            "stability": 0.65,
-                            "similarity_boost": 0.85,
-                            "style": 0.00,
-                            "use_speaker_boost": True
-                        }
-                    }
+        payload = {
+            "text": reply,
+            "model_id": "eleven_turbo_v2_5",
+            "voice_settings": {
+                "stability": 0.65,
+                "similarity_boost": 0.85,
+                "style": 0.00,
+                "use_speaker_boost": True
+            }
+        }
 
-                    audio_response = requests.post(
-                        url,
-                        json=payload,
-                        headers=headers,
-                        params={"output_format": "mp3_44100_192"},
-                        timeout=(10, 60)
-                    )
+        audio_response = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            params={"output_format": "mp3_44100_192"},
+            timeout=(10, 60)
+        )
 
-                    if audio_response.status_code == 200:
-                        st.audio(
-                            audio_response.content,
-                            format="audio/mpeg",
-                            autoplay=True
-                        )
-                    else:
-                        st.error(
-                            f"Voice Server Note ({audio_response.status_code}): "
-                            f"{audio_response.text}"
-                        )
+        if audio_response.status_code == 200:
+            st.audio(
+                audio_response.content,
+                format="audio/mpeg",
+                autoplay=True
+            )
+        else:
+            st.error(
+                f"Voice Server Note ({audio_response.status_code}): "
+                f"{audio_response.text}"
+            )
 
-                except requests.Timeout:
-                    st.error("Voice request timed out.")
+    except requests.Timeout:
+        st.error("Voice request timed out.")
 
-                except Exception as tts_err:
-                    st.error(f"Voice Stream Pause: {tts_err}")
+    except Exception as tts_err:
+        st.error(f"Voice Stream Pause: {tts_err}")
 
         except Exception as e:
             reply = "System connection issue observed."
