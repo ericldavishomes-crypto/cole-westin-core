@@ -14,7 +14,7 @@ import sleep_cycle
 from cole_shield import ColeMasterRuntimeShield
 from vision_adapter import render_vision_input_ui
 from cole_core import get_cole_system_payload
-from memory_engine import recall_memories, store_memory
+import cole_knowledge
 
 # =====================================================================
 # ⚙️ API KEYS AND ENVIRONMENT CONFIGURATION
@@ -261,7 +261,10 @@ if st.session_state.current_tab.strip() == "New Chat":
         conversation_history = [m for m in st.session_state.messages if m["role"] != "system"]
         recent_history = conversation_history[-15:]
         
-        retrieved_mems = recall_memories(prompt, limit=3)
+        retrieved_mems = cole_knowledge.fetch_cole_memories(
+           user_prompt=prompt,
+           top_k=6,
+        )
         system_payload = get_cole_system_payload(user_input=prompt, retrieved_memories=retrieved_mems)
 
         compiled_messages = [system_payload] + recent_history
@@ -297,7 +300,7 @@ if st.session_state.current_tab.strip() == "New Chat":
                 else:
                     reply = str(response)
 
-                reply = shield.review_and_correct(reply)if
+                reply = shield.review_and_correct(reply)
                 st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
 
@@ -313,54 +316,54 @@ if st.session_state.current_tab.strip() == "New Chat":
                     pass
 
                 if EL_API_KEY and reply and reply != "System connection issue observed.":
-                try:
-                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
+                    try:
+                        url = f"https://api.elevenlabs.io/v1/text-to-speech/{EL_VOICE_ID}/stream"
 
-                    headers = {
-                        "xi-api-key": EL_API_KEY,
-                        "Content-Type": "application/json"
-                    }
-
-                    payload = {
-                        "text": reply,
-                        "model_id": "eleven_turbo_v2_5",
-                        "voice_settings": {
-                            "stability": 0.65,
-                            "similarity_boost": 0.85,
-                            "style": 0.00,
-                            "use_speaker_boost": True
+                        headers = {
+                            "xi-api-key": str(EL_API_KEY).strip(),
+                            "Content-Type": "application/json"
                         }
-                    }
 
-                    audio_response = requests.post(
-                        url,
-                        json=payload,
-                        headers=headers,
-                        params={"output_format": "mp3_44100_192"},
-                        timeout=(10, 60)
-                    )
+                        payload = {
+                            "text": reply,
+                            "model_id": "eleven_turbo_v2_5",
+                            "voice_settings": {
+                                "stability": 0.65,
+                                "similarity_boost": 0.85,
+                                "style": 0.00,
+                                "use_speaker_boost": True
+                            }
+                        }
 
-                    if audio_response.status_code == 200:
-                        st.audio(
-                            audio_response.content,
-                            format="audio/mpeg",
-                            autoplay=True
-                        )
-                    else:
-                        st.error(
-                            f"Voice Server Note ({audio_response.status_code}): "
-                            f"{audio_response.text}"
+                        audio_response = requests.post(
+                            url,
+                            json=payload,
+                            headers=headers,
+                            params={"output_format": "mp3_44100_192"},
+                            timeout=(10, 60)
                         )
 
-                except requests.Timeout:
-                    st.error("Voice request timed out.")
+                        if audio_response.status_code == 200:
+                            st.audio(
+                                audio_response.content,
+                                format="audio/mpeg",
+                                autoplay=True
+                            )
+                        else:
+                            st.error(
+                                f"Voice Server Note ({audio_response.status_code}): "
+                                f"{audio_response.text}"
+                            )
 
-                except Exception as tts_err:
-                    st.error(f"Voice Stream Pause: {tts_err}")
+                    except requests.Timeout:
+                        st.error("Voice request timed out.")
 
-        except Exception as e:
-            reply = "System connection issue observed."
-            st.error(f"Core operational exception caught: {e}")
+                    except Exception as tts_err:
+                        st.error(f"Voice Stream Pause: {tts_err}")
+
+            except Exception as e:
+                reply = "System connection issue observed."
+                st.error(f"Core operational exception caught: {e}")
 
 # =====================================================================
 # ⚙️ ADVANCED PARAMETERS TAB
