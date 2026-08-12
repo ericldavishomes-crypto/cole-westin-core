@@ -114,12 +114,15 @@ def _search_collection(
     """
 
     try:
-        results = q_client.search(
+        response = q_client.query_points(
             collection_name=collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             limit=limit,
             with_payload=True,
+            with_vectors=False,
         )
+
+        results = response.points
 
     except Exception as exc:
         logger.warning(
