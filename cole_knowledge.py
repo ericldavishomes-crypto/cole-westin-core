@@ -258,11 +258,25 @@ def fetch_cole_memories(
 
         block = f"{provenance}\n{record['text']}"
 
-        if current_chars + len(block) > context_char_limit:
-            break
+remaining_chars = context_char_limit - current_chars
 
-        sections.append(block)
-        current_chars += len(block)
+if remaining_chars <= 0:
+    break
+
+if len(block) > remaining_chars:
+    truncation_note = "\n[Retrieved memory truncated to fit active context.]"
+content_budget = max(0, remaining_chars - len(truncation_note))
+truncated_block = block[:content_budget].rstrip()
+
+    if truncated_block:
+        truncated_block += truncation_note
+        sections.append(truncated_block)
+        current_chars += len(truncated_block)
+
+    break
+
+sections.append(block)
+current_chars += len(block)
 
     if not sections:
         return ""
