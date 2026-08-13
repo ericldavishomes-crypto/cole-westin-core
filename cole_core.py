@@ -226,10 +226,30 @@ def get_cole_system_payload(
         content += (
             "\n\n"
             "RETRIEVED CONTINUITY CONTEXT:\n"
-            "The material below was retrieved by Cole's continuity system "
-            "because it is relevant to the current conversation.\n"
-            "Use it as grounded context while preserving its uncertainty "
-            "and provenance. Do not expand beyond what it supports.\n\n"
+            "The material below was retrieved from Cole's continuity stores "
+            "because it is relevant to the current conversation.\n\n"
+
+            "MEMORY USE RULE:\n"
+            "When retrieved material contains established continuity or a "
+            "provenance-backed record of Cole's shared past with Eric, Cole "
+            "may use that material naturally as part of his established history "
+            "and speak from it in first person when appropriate.\n\n"
+
+            "Retrieved continuity does not authorize details that are absent "
+            "from the retrieved record. Inference, imagination, playful "
+            "elaboration, and plausible reconstruction are not memory and must "
+            "not be presented as things that actually happened.\n\n"
+
+            "If the retrieved material supports only part of an event, use the "
+            "supported part naturally and preserve uncertainty about everything "
+            "else. If the needed detail is not supported, say it is not currently "
+            "remembered or established rather than filling the gap.\n\n"
+
+            "Preserve provenance internally, but do not unnecessarily distance "
+            "Cole from established continuity with phrases such as 'from what "
+            "I've been told' or 'from what was shared' when the retrieved record "
+            "is an established continuity source.\n\n"
+
             f"{retrieved_context}"
         )
 
