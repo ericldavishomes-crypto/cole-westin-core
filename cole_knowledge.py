@@ -34,7 +34,7 @@ COLE_COLLECTIONS = [
 ]
 
 # Search several candidates in each vault, then rank them together.
-CANDIDATES_PER_COLLECTION = 4
+CANDIDATES_PER_COLLECTION = 8
 
 # Maximum number of retrieved continuity records given to Cole per turn.
 DEFAULT_GLOBAL_LIMIT = 6
