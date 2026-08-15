@@ -138,6 +138,15 @@ _LEXICAL_STOPWORDS = {
     "them", "there", "they", "this", "to", "us", "was", "we",
     "were", "what", "when", "where", "which", "who", "why",
     "with", "you", "your",
+    "about",
+    "know",
+    "knowing",
+    "memory",
+    "memories",
+    "recall",
+    "remember",
+    "remembered",
+    "tell",
 }
 
 
