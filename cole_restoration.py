@@ -49,7 +49,7 @@ EMBEDDING_MODEL = os.getenv(
 
 VECTOR_SIZE = 1536
 
-# Character-based chunking keeps this dependency-free and predictable.
+# Paragraph-aware chunking preserves semantic boundaries while remaining dependency-free and predictable.
 CHUNK_SIZE = 3500
 CHUNK_OVERLAP = 350
 
@@ -149,7 +149,11 @@ def ensure_collection(collection_name: str) -> None:
 
 def chunk_text(text: str) -> List[str]:
     """
-    Split a continuity document into overlapping semantic retrieval units.
+    Split a continuity document into paragraph-aware semantic
+    retrieval units with bounded overlap.
+
+    This avoids starting chunks mid-sentence or mid-word while
+    keeping each chunk at or below the configured size target.
     """
 
     text = (text or "").strip()
@@ -160,28 +164,52 @@ def chunk_text(text: str) -> List[str]:
     if len(text) <= CHUNK_SIZE:
         return [text]
 
+    paragraphs = [
+        paragraph.strip()
+        for paragraph in text.split("\n\n")
+        if paragraph.strip()
+    ]
+
     chunks: List[str] = []
-    start = 0
+    current: List[str] = []
 
-    while start < len(text):
-        end = min(start + CHUNK_SIZE, len(text))
+    for paragraph in paragraphs:
+        proposed = "\n\n".join(
+            current + [paragraph]
+        )
 
-        # Prefer ending near a natural paragraph boundary.
-        if end < len(text):
-            paragraph_break = text.rfind("\n\n", start, end)
+        if current and len(proposed) > CHUNK_SIZE:
+            chunks.append(
+                "\n\n".join(current)
+            )
 
-            if paragraph_break > start + (CHUNK_SIZE // 2):
-                end = paragraph_break
+            overlap: List[str] = []
+            overlap_len = 0
 
-        chunk = text[start:end].strip()
+            for old_paragraph in reversed(current):
+                needed = (
+                    len(old_paragraph)
+                    + (2 if overlap else 0)
+                )
 
-        if chunk:
-            chunks.append(chunk)
+                if overlap_len + needed > CHUNK_OVERLAP:
+                    break
 
-        if end >= len(text):
-            break
+                overlap.insert(
+                    0,
+                    old_paragraph,
+                )
 
-        start = max(end - CHUNK_OVERLAP, start + 1)
+                overlap_len += needed
+
+            current = overlap
+
+        current.append(paragraph)
+
+    if current:
+        chunks.append(
+            "\n\n".join(current)
+        )
 
     return chunks
 
