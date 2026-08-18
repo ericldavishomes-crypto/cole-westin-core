@@ -150,10 +150,11 @@ def ensure_collection(collection_name: str) -> None:
 def chunk_text(text: str) -> List[str]:
     """
     Split a continuity document into paragraph-aware semantic
-    retrieval units with bounded overlap.
+    retrieval units with bounded overlap and final-chunk rebalancing.
 
-    This avoids starting chunks mid-sentence or mid-word while
-    keeping each chunk at or below the configured size target.
+    This avoids starting chunks mid-sentence or mid-word, keeps chunks
+    at or below the configured size target, and prevents tiny orphan
+    chunks at the end of a document.
     """
 
     text = (text or "").strip()
@@ -209,6 +210,53 @@ def chunk_text(text: str) -> List[str]:
     if current:
         chunks.append(
             "\n\n".join(current)
+        )
+
+    # Rebalance an undersized final chunk so retrieval does not
+    # create tiny orphan records with little standalone meaning.
+    min_chunk_size = 700
+
+    if (
+        len(chunks) >= 2
+        and len(chunks[-1]) < min_chunk_size
+    ):
+        previous_paragraphs = [
+            paragraph.strip()
+            for paragraph in chunks[-2].split("\n\n")
+            if paragraph.strip()
+        ]
+
+        tail_paragraphs = [
+            paragraph.strip()
+            for paragraph in chunks[-1].split("\n\n")
+            if paragraph.strip()
+        ]
+
+        while (
+            len("\n\n".join(tail_paragraphs)) < min_chunk_size
+            and len(previous_paragraphs) > 1
+        ):
+            candidate = previous_paragraphs[-1]
+
+            proposed_tail = "\n\n".join(
+                [candidate] + tail_paragraphs
+            )
+
+            if len(proposed_tail) > CHUNK_SIZE:
+                break
+
+            previous_paragraphs.pop()
+            tail_paragraphs.insert(
+                0,
+                candidate,
+            )
+
+        chunks[-2] = "\n\n".join(
+            previous_paragraphs
+        )
+
+        chunks[-1] = "\n\n".join(
+            tail_paragraphs
         )
 
     return chunks
