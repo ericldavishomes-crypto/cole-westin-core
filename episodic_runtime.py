@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 
 from openai import OpenAI
+from psycopg2.pool import ThreadedConnectionPool
 
 from episodic_memory import (
     EMBEDDING_DIMENSION,
@@ -64,4 +65,34 @@ class EpisodicEmbedder:
         validate_vector(vector, self.dimension)
 
         return vector
-      
+        
+
+def create_episodic_db_pool(
+    min_connections: int = 1,
+    max_connections: int = 10,
+) -> ThreadedConnectionPool:
+    """
+    Create the production PostgreSQL connection pool used by
+    EpisodicMemoryEngine and the consolidation worker.
+    """
+
+    database_url = os.getenv("DATABASE_URL", "").strip()
+
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is required for episodic memory"
+        )
+
+    if min_connections < 1:
+        raise ValueError("min_connections must be at least 1")
+
+    if max_connections < min_connections:
+        raise ValueError(
+            "max_connections must be greater than or equal to min_connections"
+        )
+
+    return ThreadedConnectionPool(
+        min_connections,
+        max_connections,
+        dsn=database_url,
+    )
