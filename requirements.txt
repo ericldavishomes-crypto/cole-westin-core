@@ -7,3 +7,4 @@ requests
 pytz
 qdrant-client
 boto3
+minio
