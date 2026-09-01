@@ -4,7 +4,6 @@ enableXsrfProtection = false
 enableWebsocketCompression = false
 disconnectedSessionTTL = 600
 websocketPingInterval = 20
-websocketPingTimeout = 10
 maxMessageSize = 200
 
 [browser]
