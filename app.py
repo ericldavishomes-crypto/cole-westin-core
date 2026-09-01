@@ -72,6 +72,21 @@ def get_postgres_engine():
     return create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20)
 
 db_engine = get_postgres_engine()
+def record_event_fragment(session_id: str, user_text: str, cole_response: str) -> str:
+    with db_engine.begin() as conn:
+        fragment_id = conn.execute(
+            text("""
+                INSERT INTO event_fragments (session_id, user_text, cole_response)
+                VALUES (:session_id, :user_text, :cole_response)
+                RETURNING fragment_id::text;
+            """),
+            {
+                "session_id": session_id,
+                "user_text": user_text,
+                "cole_response": cole_response,
+            },
+        ).scalar_one()
+    return fragment_id
 
 def verify_scaffolding_tables():
     with db_engine.begin() as conn:
@@ -301,7 +316,10 @@ if st.session_state.current_tab.strip() == "New Chat":
                     reply = str(response)
 
                 reply = shield.review_and_correct(reply)
-                st.markdown(f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<p style='color:#0A192F !important; font-weight: 450 !important;'>{reply}</p>",
+                    unsafe_allow_html=True
+                )
                 st.session_state.messages.append({"role": "assistant", "content": reply})
 
                 st.session_state.staged_image_b64 = None
@@ -310,9 +328,22 @@ if st.session_state.current_tab.strip() == "New Chat":
                     with db_engine.begin() as db_conn:
                         db_conn.execute(
                             text("INSERT INTO chat_messages (session_id, role, content) VALUES (:sid, :role, :content);"),
-                            {"sid": st.session_state.current_session_id, "role": "assistant", "content": reply}
+                            {
+                                "sid": st.session_state.current_session_id,
+                                "role": "assistant",
+                                "content": reply
+                            }
                         )
                 except Exception as db_err:
+                    pass
+
+                try:
+                    record_event_fragment(
+                        session_id=st.session_state.current_session_id,
+                        user_text=prompt,
+                        cole_response=reply,
+                    )
+                except Exception as fragment_err:
                     pass
 
                 if EL_API_KEY and reply and reply != "System connection issue observed.":
@@ -357,7 +388,6 @@ if st.session_state.current_tab.strip() == "New Chat":
 
                     except requests.Timeout:
                         st.error("Voice request timed out.")
-
                     except Exception as tts_err:
                         st.error(f"Voice Stream Pause: {tts_err}")
 
