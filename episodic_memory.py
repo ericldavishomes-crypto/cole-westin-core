@@ -18,8 +18,8 @@ from qdrant_client.models import Distance, PayloadSchemaType, PointStruct, Vecto
 logger = logging.getLogger(__name__)
 
 ENV_MODE = os.getenv("ENV_MODE", "production")
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://cole-memory-index:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "qdrant")
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
