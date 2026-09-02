@@ -21,11 +21,17 @@ ENV_MODE = os.getenv("ENV_MODE", "production")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://cole-memory-index:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "qdrant")
 MINIO_ENDPOINT_RAW = os.getenv("MINIO_ENDPOINT", "localhost:9000").strip()
-MINIO_ENDPOINT_PARSED = urlparse(MINIO_ENDPOINT_RAW)
-MINIO_ENDPOINT = MINIO_ENDPOINT_PARSED.netloc or MINIO_ENDPOINT_PARSED.path
+
+if "://" in MINIO_ENDPOINT_RAW:
+    MINIO_ENDPOINT_PARSED = urlparse(MINIO_ENDPOINT_RAW)
+    MINIO_ENDPOINT = MINIO_ENDPOINT_PARSED.netloc
+    MINIO_SECURE = MINIO_ENDPOINT_PARSED.scheme.lower() == "https"
+else:
+    MINIO_ENDPOINT = MINIO_ENDPOINT_RAW
+    MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_SECURE = MINIO_ENDPOINT_PARSED.scheme.lower() == "https"
 
 EPISODIC_COLLECTION_NAME = "cole_episodic_memory"
 EMBEDDING_DIMENSION = 1536
