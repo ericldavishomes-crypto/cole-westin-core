@@ -55,7 +55,15 @@ def normalize_text(text: str) -> str:
 def calculate_sha256(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
-
+def generate_episode_idempotency_key(
+    session_id: str,
+    source_fragment_ids: list[str],
+    extraction_model: str,
+) -> str:
+    return calculate_sha256(
+        f"{session_id}:{','.join(source_fragment_ids)}:{EPISODE_SCHEMA_VERSION}:"
+        f"{EXTRACTION_PROMPT_VERSION}:{extraction_model}:{EMBEDDING_MODEL_VERSION}"
+    )
 def normalize_uuid(value: Any) -> Optional[str]:
     try:
         return str(uuid.UUID(str(value)))
@@ -288,10 +296,11 @@ class EpisodicMemoryEngine:
                     )
 
                 summary_sha = calculate_sha256(extracted_data.dense_summary)
-                idempotency_key = calculate_sha256(
-                    f"{session_id}:{','.join(source_fragment_ids)}:{EPISODE_SCHEMA_VERSION}:"
-                    f"{EXTRACTION_PROMPT_VERSION}:{extraction_model}:{EMBEDDING_MODEL_VERSION}"
-                )
+                idempotency_key = generate_episode_idempotency_key(
+    session_id,
+    source_fragment_ids,
+    extraction_model,
+)
                 now = datetime.now(timezone.utc)
                 cursor.execute(
                     """
