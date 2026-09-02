@@ -22,6 +22,10 @@ class ConsolidationJobClaim:
     lease_expires_at: datetime
 
 
+class ConsolidationLeaseLostError(RuntimeError):
+    """Raised when a worker no longer owns a valid processing lease."""
+
+
 def claim_next_consolidation_job(
     conn: PsycopgConnection,
     lease_owner: str,
@@ -113,3 +117,64 @@ def claim_next_consolidation_job(
         lease_acquired_at=row[7],
         lease_expires_at=row[8],
     )
+
+
+def complete_consolidation_job(
+    conn: PsycopgConnection,
+    processing_id: str,
+    lease_token: str,
+    episode_id: str,
+) -> None:
+    """
+    Mark a consolidation job completed only while the caller still owns
+    its live lease.
+
+    Completion is CAS-guarded by processing ID, processing state,
+    lease token, and lease expiration.
+    """
+
+    if not processing_id:
+        raise ValueError("processing_id is required")
+
+    if not lease_token:
+        raise ValueError("lease_token is required")
+
+    if not episode_id:
+        raise ValueError("episode_id is required")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE episodic_consolidation_processing
+            SET
+                status = 'completed',
+                episode_id = %s::uuid,
+                completed_at = NOW(),
+                lease_owner = NULL,
+                lease_token = NULL,
+                lease_acquired_at = NULL,
+                lease_expires_at = NULL,
+                next_retry_at = NULL,
+                last_error = NULL,
+                updated_at = NOW()
+            WHERE
+                id = %s::uuid
+                AND status = 'processing'
+                AND lease_token = %s::uuid
+                AND lease_expires_at > NOW()
+            RETURNING id;
+            """,
+            (
+                episode_id,
+                processing_id,
+                lease_token,
+            ),
+        )
+
+        completed = cur.fetchone()
+
+    if completed is None:
+        raise ConsolidationLeaseLostError(
+            "Consolidation job completion rejected: "
+            "lease is missing, expired, or no longer owned"
+        )
