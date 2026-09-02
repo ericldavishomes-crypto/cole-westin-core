@@ -178,3 +178,84 @@ def complete_consolidation_job(
             "Consolidation job completion rejected: "
             "lease is missing, expired, or no longer owned"
         )
+def record_consolidation_failure(
+    conn: PsycopgConnection,
+    processing_id: str,
+    lease_token: str,
+    error_message: str,
+) -> tuple[str, int]:
+    """
+    Record a failed consolidation attempt while the caller still owns
+    its live lease.
+
+    Retry delay mirrors the episodic re-embedding policy:
+    1, 2, 4, 8, ... minutes, capped at 360 minutes.
+
+    Returns:
+        (new_status, new_retry_count)
+    """
+
+    if not processing_id:
+        raise ValueError("processing_id is required")
+
+    if not lease_token:
+        raise ValueError("lease_token is required")
+
+    clean_error = (error_message or "").strip()
+
+    if not clean_error:
+        raise ValueError("error_message is required")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE episodic_consolidation_processing
+            SET
+                retry_count = retry_count + 1,
+                status = CASE
+                    WHEN retry_count + 1 >= max_retries
+                        THEN 'exhausted'
+                    ELSE 'retry_wait'
+                END,
+                next_retry_at = CASE
+                    WHEN retry_count + 1 >= max_retries
+                        THEN NULL
+                    ELSE NOW() + (
+                        LEAST(
+                            POWER(2, retry_count),
+                            360
+                        )::INTEGER * INTERVAL '1 minute'
+                    )
+                END,
+                last_error = %s,
+                lease_owner = NULL,
+                lease_token = NULL,
+                lease_acquired_at = NULL,
+                lease_expires_at = NULL,
+                completed_at = NULL,
+                updated_at = NOW()
+            WHERE
+                id = %s::uuid
+                AND status = 'processing'
+                AND lease_token = %s::uuid
+                AND lease_expires_at > NOW()
+            RETURNING
+                status,
+                retry_count;
+            """,
+            (
+                clean_error,
+                processing_id,
+                lease_token,
+            ),
+        )
+
+        row = cur.fetchone()
+
+    if row is None:
+        raise ConsolidationLeaseLostError(
+            "Consolidation failure update rejected: "
+            "lease is missing, expired, or no longer owned"
+        )
+
+    return row[0], row[1]
