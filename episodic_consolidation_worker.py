@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -25,7 +26,41 @@ class ConsolidationJobClaim:
 class ConsolidationLeaseLostError(RuntimeError):
     """Raised when a worker no longer owns a valid processing lease."""
 
+def _enqueue_operational_outbox(
+    cur,
+    event_type: str,
+    payload: dict,
+) -> None:
+    """
+    Enqueue an operational event inside the caller's existing transaction.
+    """
 
+    cur.execute(
+        """
+        INSERT INTO operational_outbox (
+            event_type,
+            payload,
+            status,
+            retry_count,
+            next_retry_at,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            %s,
+            %s::jsonb,
+            'pending',
+            0,
+            NOW(),
+            NOW(),
+            NOW()
+        );
+        """,
+        (
+            event_type,
+            json.dumps(payload),
+        ),
+    )
 def claim_next_consolidation_job(
     conn: PsycopgConnection,
     lease_owner: str,
