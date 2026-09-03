@@ -307,13 +307,12 @@ def record_consolidation_failure(
             )
 
         return new_status, new_retry_count
-        
-    def recover_expired_consolidation_lease(
+
+def recover_expired_consolidation_lease(
     conn: PsycopgConnection,
 ) -> tuple[str, str, int] | None:
     """
     Recover the oldest consolidation job whose processing lease expired.
-
     Lease recovery is accounted separately from ordinary processing
     failures. retry_count is never changed here.
 
