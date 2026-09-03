@@ -313,6 +313,7 @@ def recover_expired_consolidation_lease(
 ) -> tuple[str, str, int] | None:
     """
     Recover the oldest consolidation job whose processing lease expired.
+
     Lease recovery is accounted separately from ordinary processing
     failures. retry_count is never changed here.
 
@@ -362,7 +363,19 @@ def recover_expired_consolidation_lease(
 
         row = cur.fetchone()
 
-    if row is None:
-        return None
+        if row is None:
+            return None
 
-    return row[0], row[1], row[2]
+        processing_id, new_status, new_lease_recovery_count = row
+
+        if new_status == "exhausted":
+            _enqueue_operational_outbox(
+                cur,
+                "CONSOLIDATION_LEASE_RECOVERY_EXHAUSTED_ALERT",
+                {
+                    "processing_id": processing_id,
+                    "lease_recovery_count": new_lease_recovery_count,
+                },
+            )
+
+        return processing_id, new_status, new_lease_recovery_count
