@@ -287,15 +287,28 @@ def record_consolidation_failure(
 
         row = cur.fetchone()
 
-    if row is None:
-        raise ConsolidationLeaseLostError(
-            "Consolidation failure update rejected: "
-            "lease is missing, expired, or no longer owned"
-        )
+        if row is None:
+            raise ConsolidationLeaseLostError(
+                "Consolidation failure update rejected: "
+                "lease is missing, expired, or no longer owned"
+            )
 
-    return row[0], row[1]
+        new_status, new_retry_count = row
 
-def recover_expired_consolidation_lease(
+        if new_status == "exhausted":
+            _enqueue_operational_outbox(
+                cur,
+                "CONSOLIDATION_PROCESSING_EXHAUSTED_ALERT",
+                {
+                    "processing_id": processing_id,
+                    "retry_count": new_retry_count,
+                    "error": clean_error,
+                },
+            )
+
+        return new_status, new_retry_count
+        
+    def recover_expired_consolidation_lease(
     conn: PsycopgConnection,
 ) -> tuple[str, str, int] | None:
     """
