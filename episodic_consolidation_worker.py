@@ -7,7 +7,11 @@ from datetime import datetime
 
 from psycopg2.extensions import connection as PsycopgConnection
 
-from episodic_memory import WORKER_LEASE_MINUTES
+from episodic_memory import (
+    EXTRACTION_PROMPT_VERSION,
+    WORKER_LEASE_MINUTES,
+    generate_episode_idempotency_key,
+)
 
 
 @dataclass(frozen=True)
