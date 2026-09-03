@@ -259,3 +259,63 @@ def record_consolidation_failure(
         )
 
     return row[0], row[1]
+
+def recover_expired_consolidation_lease(
+    conn: PsycopgConnection,
+) -> tuple[str, str, int] | None:
+    """
+    Recover the oldest consolidation job whose processing lease expired.
+
+    Lease recovery is accounted separately from ordinary processing
+    failures. retry_count is never changed here.
+
+    Returns:
+        (processing_id, new_status, new_lease_recovery_count)
+
+    Returns None when no expired processing lease is eligible.
+    """
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            WITH recoverable AS (
+                SELECT id
+                FROM episodic_consolidation_processing
+                WHERE
+                    status = 'processing'
+                    AND lease_expires_at <= NOW()
+                    AND lease_recovery_count < max_lease_recoveries
+                ORDER BY lease_expires_at, created_at
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+            )
+            UPDATE episodic_consolidation_processing AS p
+            SET
+                lease_recovery_count = lease_recovery_count + 1,
+                status = CASE
+                    WHEN lease_recovery_count + 1 >= max_lease_recoveries
+                        THEN 'exhausted'
+                    ELSE 'pending'
+                END,
+                lease_owner = NULL,
+                lease_token = NULL,
+                lease_acquired_at = NULL,
+                lease_expires_at = NULL,
+                next_retry_at = NULL,
+                completed_at = NULL,
+                updated_at = NOW()
+            FROM recoverable
+            WHERE p.id = recoverable.id
+            RETURNING
+                p.id::text,
+                p.status,
+                p.lease_recovery_count;
+            """
+        )
+
+        row = cur.fetchone()
+
+    if row is None:
+        return None
+
+    return row[0], row[1], row[2]
