@@ -30,6 +30,202 @@ class ConsolidationJobClaim:
 class ConsolidationLeaseLostError(RuntimeError):
     """Raised when a worker no longer owns a valid processing lease."""
 
+def create_consolidation_job(
+    conn: PsycopgConnection,
+    session_id: str,
+    source_fragment_ids: list[str],
+    extraction_model: str,
+) -> tuple[str, bool]:
+    """
+    Create one deterministic consolidation processing job.
+
+    The caller supplies the already-selected ordered fragment window.
+    This function does not decide which fragments belong together.
+
+    Returns:
+        (processing_id, created)
+
+    Transaction ownership remains with the caller.
+    """
+
+    clean_session_id = (session_id or "").strip()
+    clean_extraction_model = (extraction_model or "").strip()
+
+    if not clean_session_id:
+        raise ValueError("session_id is required")
+
+    if not clean_extraction_model:
+        raise ValueError("extraction_model is required")
+
+    if not source_fragment_ids:
+        raise ValueError("source_fragment_ids must not be empty")
+
+    normalized_fragment_ids: list[str] = []
+
+    for fragment_id in source_fragment_ids:
+        try:
+            normalized_fragment_ids.append(str(uuid.UUID(str(fragment_id))))
+        except (ValueError, AttributeError, TypeError) as exc:
+            raise ValueError(
+                f"Invalid source fragment UUID: {fragment_id}"
+            ) from exc
+
+    if len(set(normalized_fragment_ids)) != len(normalized_fragment_ids):
+        raise ValueError("source_fragment_ids must not contain duplicates")
+
+    idempotency_key = generate_episode_idempotency_key(
+        session_id=clean_session_id,
+        source_fragment_ids=normalized_fragment_ids,
+        extraction_model=clean_extraction_model,
+    )
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                fragment_id::text,
+                session_id
+            FROM event_fragments
+            WHERE fragment_id = ANY(%s::uuid[]);
+            """,
+            (normalized_fragment_ids,),
+        )
+
+        source_rows = cur.fetchall()
+
+        if len(source_rows) != len(normalized_fragment_ids):
+            found_ids = {row[0] for row in source_rows}
+            missing_ids = [
+                fragment_id
+                for fragment_id in normalized_fragment_ids
+                if fragment_id not in found_ids
+            ]
+            raise ValueError(
+                f"Unknown source fragment IDs: {missing_ids}"
+            )
+
+        wrong_session_ids = [
+            fragment_id
+            for fragment_id, fragment_session_id in source_rows
+            if fragment_session_id != clean_session_id
+        ]
+
+        if wrong_session_ids:
+            raise ValueError(
+                "All source fragments must belong to the requested session_id"
+            )
+
+        cur.execute(
+            """
+            INSERT INTO episodic_consolidation_processing (
+                idempotency_key,
+                session_id,
+                extraction_model,
+                extraction_prompt_version
+            )
+            VALUES (
+                %s,
+                %s,
+                %s,
+                %s
+            )
+            ON CONFLICT (idempotency_key) DO NOTHING
+            RETURNING id::text;
+            """,
+            (
+                idempotency_key,
+                clean_session_id,
+                clean_extraction_model,
+                EXTRACTION_PROMPT_VERSION,
+            ),
+        )
+
+        inserted_row = cur.fetchone()
+
+        if inserted_row is not None:
+            processing_id = inserted_row[0]
+
+            for source_order, fragment_id in enumerate(normalized_fragment_ids):
+                cur.execute(
+                    """
+                    INSERT INTO episodic_consolidation_fragments (
+                        processing_id,
+                        fragment_id,
+                        source_order
+                    )
+                    VALUES (
+                        %s::uuid,
+                        %s::uuid,
+                        %s
+                    );
+                    """,
+                    (
+                        processing_id,
+                        fragment_id,
+                        source_order,
+                    ),
+                )
+
+            return processing_id, True
+
+        cur.execute(
+            """
+            SELECT
+                id::text,
+                session_id,
+                extraction_model,
+                extraction_prompt_version
+            FROM episodic_consolidation_processing
+            WHERE idempotency_key = %s;
+            """,
+            (idempotency_key,),
+        )
+
+        existing_job = cur.fetchone()
+
+        if existing_job is None:
+            raise RuntimeError(
+                "Idempotency conflict occurred but existing consolidation job "
+                "could not be loaded"
+            )
+
+        processing_id = existing_job[0]
+
+        if existing_job[1] != clean_session_id:
+            raise RuntimeError(
+                "Existing consolidation job has unexpected session_id"
+            )
+
+        if existing_job[2] != clean_extraction_model:
+            raise RuntimeError(
+                "Existing consolidation job has unexpected extraction_model"
+            )
+
+        if existing_job[3] != EXTRACTION_PROMPT_VERSION:
+            raise RuntimeError(
+                "Existing consolidation job has unexpected extraction_prompt_version"
+            )
+
+        cur.execute(
+            """
+            SELECT fragment_id::text
+            FROM episodic_consolidation_fragments
+            WHERE processing_id = %s::uuid
+            ORDER BY source_order;
+            """,
+            (processing_id,),
+        )
+
+        existing_fragment_ids = [row[0] for row in cur.fetchall()]
+
+        if existing_fragment_ids != normalized_fragment_ids:
+            raise RuntimeError(
+                "Existing consolidation job fragment membership does not match "
+                "its deterministic idempotency key"
+            )
+
+        return processing_id, False
+        
 def _enqueue_operational_outbox(
     cur,
     event_type: str,
